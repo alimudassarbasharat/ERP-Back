@@ -37,6 +37,7 @@ use App\Http\Controllers\Country\CountryCodeController;
 use App\Http\Controllers\Settings\SettingsController;
 use App\Http\Controllers\Statistics\StatisticsController;
 use App\Http\Controllers\Messaging\ChannelController;
+use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\Messaging\MessageController;
 use App\Http\Controllers\Messaging\MessagingUserController;
 use App\Http\Controllers\Slack\SlackController;
@@ -338,6 +339,13 @@ Route::middleware(['auth:api', 'merchant_verification'])->group(function () {
 
     // Statistics endpoint
     Route::get('/statistics/counts', [StatisticsController::class, 'getCounts']);
+    
+    // Dashboard endpoints
+    Route::prefix('admin/dashboard')->group(function () {
+        Route::get('/monthly-income', [DashboardController::class, 'getMonthlyIncome']);
+        Route::get('/fee-distribution', [DashboardController::class, 'getFeeDistribution']);
+        Route::get('/statistics', [DashboardController::class, 'getStatistics']);
+    });
     // Departments
     Route::get('/departments', [DepartmentController::class, 'index']);
     Route::post('/departments', [DepartmentController::class, 'store']);
