@@ -43,7 +43,7 @@ return [
     
         'api' => [
             'driver' => 'passport',
-            'provider' => 'admins',
+            'provider' => 'multi', // CRITICAL FIX: Use multi-model provider
         ],
     ],
 
@@ -70,10 +70,26 @@ return [
             'model' => App\Models\Admin::class,
         ],
 
-        // 'users' => [
-        //     'driver' => 'database',
-        //     'table' => 'users',
-        // ],
+        'users' => [
+            'driver' => 'eloquent',
+            'model' => App\Models\User::class,
+        ],
+
+        'teachers' => [
+            'driver' => 'eloquent',
+            'model' => App\Models\Teacher::class,
+        ],
+
+        'students' => [
+            'driver' => 'eloquent',
+            'model' => App\Models\Student::class,
+        ],
+
+        // CRITICAL FIX: Multi-model provider that resolves both Admin and User
+        // Note: 'via' is used when driver is 'custom', but we register it in AuthServiceProvider
+        'multi' => [
+            'driver' => 'multi', // Use the registered provider name directly
+        ],
     ],
 
     /*

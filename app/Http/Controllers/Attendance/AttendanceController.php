@@ -13,6 +13,8 @@ use App\Models\AcademicYear;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\Log;
 use Carbon\Carbon;
 
 class AttendanceController extends Controller
@@ -47,7 +49,12 @@ class AttendanceController extends Controller
             ->where('status', AttendanceRecord::STATUS_ABSENT)
             ->count();
 
-        $todayTotal = Student::where('status', 'active')->count();
+        // Check if status column exists before using it
+        $studentQuery = Student::query();
+        if (Schema::hasColumn('students', 'status')) {
+            $studentQuery->where('status', 'active');
+        }
+        $todayTotal = $studentQuery->count();
 
         $monthlyStats = AttendanceRecord::forMonth($currentMonth, $currentYear)
             ->select('status', DB::raw('count(*) as count'))
@@ -74,9 +81,14 @@ class AttendanceController extends Controller
 
         $students = Student::with(['class', 'section'])
             ->where('class_id', $request->class_id)
-            ->where('section_id', $request->section_id)
-            ->where('status', 'active')
-            ->get();
+            ->where('section_id', $request->section_id);
+        
+        // Check if status column exists before using it
+        if (Schema::hasColumn('students', 'status')) {
+            $students->where('status', 'active');
+        }
+        
+        $students = $students->get();
 
         // Check if attendance already exists
         $existingAttendance = AttendanceRecord::where('class_id', $request->class_id)
@@ -325,8 +337,12 @@ class AttendanceController extends Controller
         $month = Carbon::now()->month;
         $year = Carbon::now()->year;
 
-        $query = Student::with(['class', 'section'])
-            ->where('status', 'active');
+        $query = Student::with(['class', 'section']);
+        
+        // Check if status column exists before using it
+        if (Schema::hasColumn('students', 'status')) {
+            $query->where('status', 'active');
+        }
 
         if ($request->class_id) {
             $query->where('class_id', $request->class_id);
@@ -455,11 +471,73 @@ class AttendanceController extends Controller
     public function getStudentsWithPagination(\App\Http\Requests\Attendance\GetStudentsPaginatedRequest $request)
     {
         // Validated by Form Request
+        
+        // Get merchant_id from request or authenticated user (CRITICAL for tenant isolation)
+        $merchantId = $request->merchant_id 
+            ?? $request->attributes->get('merchant_id') 
+            ?? auth()->user()?->merchant_id 
+            ?? auth()->user()?->admin?->merchant_id
+            ?? null;
+        
+        // Validate that class and section belong to current merchant_id
+        if ($merchantId) {
+            $class = Classes::where('id', $request->class_id)
+                ->where('merchant_id', $merchantId)
+                ->first();
+            
+            if (!$class) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Class not found or does not belong to your organization.'
+                ], 404);
+            }
+            
+            $section = Section::where('id', $request->section_id)
+                ->where('merchant_id', $merchantId)
+                ->first();
+            
+            if (!$section) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Section not found or does not belong to your organization.'
+                ], 404);
+            }
+            
+            // Validate subject if provided
+            if ($request->subject_id) {
+                $subject = Subject::where('id', $request->subject_id)
+                    ->where('merchant_id', $merchantId)
+                    ->first();
+                
+                if (!$subject) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'Subject not found or does not belong to your organization.'
+                    ], 404);
+                }
+            }
+        }
 
         $query = Student::with(['class', 'section'])
             ->where('class_id', $request->class_id)
-            ->where('section_id', $request->section_id)
-            ->where('status', 'active');
+            ->where('section_id', $request->section_id);
+        
+        // CRITICAL: Always filter by merchant_id if available
+        if ($merchantId && Schema::hasColumn('students', 'merchant_id')) {
+            $query->where('students.merchant_id', $merchantId);
+        } elseif (!$merchantId) {
+            // Log warning if merchant_id is missing
+            Log::warning('AttendanceController: merchant_id not found in getStudentsWithPagination', [
+                'user_id' => auth()->id(),
+                'class_id' => $request->class_id,
+                'section_id' => $request->section_id
+            ]);
+        }
+        
+        // Check if status column exists before using it
+        if (Schema::hasColumn('students', 'status')) {
+            $query->where('status', 'active');
+        }
 
         // Add session filter if provided
         if ($request->session_id) {
@@ -496,6 +574,11 @@ class AttendanceController extends Controller
             $attendanceQuery = AttendanceRecord::where('class_id', $request->class_id)
                 ->where('section_id', $request->section_id)
                 ->where('attendance_date', $date);
+            
+            // CRITICAL: Filter attendance records by merchant_id if available
+            if ($merchantId && Schema::hasColumn('attendance_records', 'merchant_id')) {
+                $attendanceQuery->where('attendance_records.merchant_id', $merchantId);
+            }
 
             if ($request->subject_id && $request->attendance_mode === 'period_wise') {
                 $attendanceQuery->where('subject_id', $request->subject_id);

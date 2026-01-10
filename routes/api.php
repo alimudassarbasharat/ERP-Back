@@ -44,6 +44,7 @@ use App\Http\Controllers\Slack\SlackController;
 use App\Http\Controllers\Department\DepartmentController;
 use App\Http\Controllers\WorkspaceController;
 use App\Http\Controllers\TicketController;
+use App\Http\Controllers\Api\SchoolProfileController;
 
 
 /*
@@ -76,6 +77,7 @@ Route::get('/password/reset/{token}', function ($token) {
 Route::middleware(['auth:api', 'merchant_verification'])->group(function () {
     Route::get('/user', [AuthController::class, 'user']);
     Route::post('/logout', [AuthController::class, 'logout']);
+    Route::post('/refresh', [AuthController::class, 'refresh']);
 
     // Admin Management
     Route::prefix('admins')->group(function () {
@@ -150,6 +152,7 @@ Route::middleware(['auth:api', 'merchant_verification'])->group(function () {
     Route::prefix('classes')->group(function () {
         Route::get('/', [ClassController::class, 'index']);
         Route::post('/store', [ClassController::class, 'store']);
+        Route::post('/bulk-store', [ClassController::class, 'bulkStore']);
         Route::get('/{id}', [ClassController::class, 'show']);
         Route::post('/{id}/update', [ClassController::class, 'update']);
         Route::post('/{id}/delete', [ClassController::class, 'destroy']);
@@ -162,20 +165,27 @@ Route::middleware(['auth:api', 'merchant_verification'])->group(function () {
     Route::prefix('sections')->group(function () {
         Route::get('/', [SectionController::class, 'index']);
         Route::post('/store', [SectionController::class, 'store']);
+        Route::post('/bulk-store', [SectionController::class, 'bulkStore']);
         Route::get('/{id}', [SectionController::class, 'show']);
         Route::post('/{id}/update', [SectionController::class, 'update']);
         Route::post('/{id}/delete', [SectionController::class, 'destroy']);
+        Route::post('/{id}/assign-classes', [SectionController::class, 'assignClasses']);
         Route::get('/select-options', [SectionController::class, 'getSectionsForSelect']);
     });
 
     // Session Management
     Route::prefix('sessions')->group(function () {
         Route::get('/', [SessionController::class, 'index']);
+        Route::get('/list', [SessionController::class, 'list']);
+        Route::get('/select-options', [SessionController::class, 'getSessionsForSelect']);
+        Route::get('/active', [SessionController::class, 'getActiveSession']);
+        Route::get('/debug', [SessionController::class, 'debugSessions']); // DEBUG endpoint
         Route::post('/store', [SessionController::class, 'store']);
         Route::get('/{id}', [SessionController::class, 'show']);
         Route::post('/{id}/update', [SessionController::class, 'update']);
-        Route::post('/{id}/delete', [SessionController::class, 'destroy']);
-        Route::get('/select-options', [SessionController::class, 'getSessionsForSelect']);
+        Route::post('/{id}/activate', [SessionController::class, 'activate']);
+        Route::post('/{id}/archive', [SessionController::class, 'archive']);
+        Route::delete('/{id}', [SessionController::class, 'destroy']);
     });
 
     // Event Routes
@@ -206,6 +216,79 @@ Route::middleware(['auth:api', 'merchant_verification'])->group(function () {
         Route::post('/update/{id}', [ExamController::class, 'update']);
         Route::get('/delete/{id}', [ExamController::class, 'delete']);
         Route::get('/{id}/subjects', [ExamController::class, 'subjects']);
+    });
+
+    // Exam Terms Management
+    Route::prefix('exam-terms')->group(function () {
+        Route::get('/', [\App\Http\Controllers\Api\ExamTermController::class, 'index']);
+        Route::get('/active', [\App\Http\Controllers\Api\ExamTermController::class, 'active']);
+        Route::post('/', [\App\Http\Controllers\Api\ExamTermController::class, 'store']);
+        Route::get('/{id}', [\App\Http\Controllers\Api\ExamTermController::class, 'show']);
+        Route::put('/{id}', [\App\Http\Controllers\Api\ExamTermController::class, 'update']);
+        Route::delete('/{id}', [\App\Http\Controllers\Api\ExamTermController::class, 'destroy']);
+    });
+
+    // Exam Management (Owner-First API)
+    Route::prefix('exam-management')->group(function () {
+        Route::get('/dashboard-stats', [\App\Http\Controllers\Api\ExamManagementController::class, 'getDashboardStats']);
+        Route::get('/exams/{id}/publish-checklist', [\App\Http\Controllers\Api\ExamManagementController::class, 'getPublishChecklist']);
+        Route::post('/exams/{id}/lock', [\App\Http\Controllers\Api\ExamManagementController::class, 'lockExam']);
+        Route::post('/exams/{id}/publish-results', [\App\Http\Controllers\Api\ExamManagementController::class, 'publishResults']);
+        Route::post('/exams/{id}/generate-results', [\App\Http\Controllers\Api\ExamManagementController::class, 'generateResults']);
+        Route::get('/exams/{id}/marksheets', [\App\Http\Controllers\Api\ExamManagementController::class, 'downloadMarksheets']);
+    });
+    
+    // Datesheet Management
+    Route::prefix('datesheets')->group(function () {
+        Route::get('/exams/{examId}', [\App\Http\Controllers\Api\DatesheetController::class, 'getDatesheet']);
+        Route::post('/', [\App\Http\Controllers\Api\DatesheetController::class, 'store']);
+        Route::post('/{datesheetId}/entries', [\App\Http\Controllers\Api\DatesheetController::class, 'addEntry']);
+        Route::put('/entries/{entryId}', [\App\Http\Controllers\Api\DatesheetController::class, 'updateEntry']);
+        Route::delete('/entries/{entryId}', [\App\Http\Controllers\Api\DatesheetController::class, 'deleteEntry']);
+        Route::get('/{datesheetId}/conflicts', [\App\Http\Controllers\Api\DatesheetController::class, 'getConflicts']);
+        Route::post('/{datesheetId}/publish', [\App\Http\Controllers\Api\DatesheetController::class, 'publish']);
+    });
+    
+    // Enhanced Marks Entry (Multi-class/Multi-subject)
+    Route::prefix('exam-marks')->group(function () {
+        Route::post('/fetch-students', [\App\Http\Controllers\Api\ExamMarksController::class, 'fetchStudents']);
+        Route::post('/fetch-subjects', [\App\Http\Controllers\Api\ExamMarksController::class, 'fetchSubjects']);
+        Route::post('/save-draft', [\App\Http\Controllers\Api\ExamMarksController::class, 'saveDraft']);
+        Route::post('/submit', [\App\Http\Controllers\Api\ExamMarksController::class, 'submit']);
+        Route::post('/verify', [\App\Http\Controllers\Api\ExamMarksController::class, 'verify']);
+        Route::post('/lock', [\App\Http\Controllers\Api\ExamMarksController::class, 'lock']);
+    });
+    
+    // Exam Papers Management
+    Route::prefix('exam-papers')->group(function () {
+        Route::get('/', [\App\Http\Controllers\Api\ExamPaperController::class, 'index']);
+        Route::post('/', [\App\Http\Controllers\Api\ExamPaperController::class, 'store']);
+        Route::get('/{id}', [\App\Http\Controllers\Api\ExamPaperController::class, 'show']);
+        Route::put('/{id}', [\App\Http\Controllers\Api\ExamPaperController::class, 'update']);
+        Route::post('/{id}/questions', [\App\Http\Controllers\Api\ExamPaperController::class, 'addQuestion']);
+        Route::put('/{id}/questions/{questionId}', [\App\Http\Controllers\Api\ExamPaperController::class, 'updateQuestion']);
+        Route::delete('/{id}/questions/{questionId}', [\App\Http\Controllers\Api\ExamPaperController::class, 'deleteQuestion']);
+        Route::post('/{id}/submit', [\App\Http\Controllers\Api\ExamPaperController::class, 'submit']);
+        Route::post('/{id}/approve', [\App\Http\Controllers\Api\ExamPaperController::class, 'approve']);
+        Route::post('/{id}/reject', [\App\Http\Controllers\Api\ExamPaperController::class, 'reject']);
+        Route::post('/{id}/lock', [\App\Http\Controllers\Api\ExamPaperController::class, 'lock']);
+    });
+    
+    // Fee Management (Owner-First API)
+    Route::prefix('fee-management')->group(function () {
+        Route::get('/summary', [\App\Http\Controllers\Api\FeeManagementController::class, 'getSummary']);
+        Route::get('/defaulters', [\App\Http\Controllers\Api\FeeManagementController::class, 'getDefaulters']);
+        Route::get('/recent-payments', [\App\Http\Controllers\Api\FeeManagementController::class, 'getRecentPayments']);
+        Route::get('/recent-disputes', [\App\Http\Controllers\Api\FeeManagementController::class, 'getRecentDisputes']);
+        Route::get('/insights', [\App\Http\Controllers\Api\FeeManagementController::class, 'getInsights']);
+        Route::post('/preview-monthly-fees', [\App\Http\Controllers\Api\FeeManagementController::class, 'previewMonthlyFees']);
+        Route::post('/generate-monthly-fees', [\App\Http\Controllers\Api\FeeManagementController::class, 'generateMonthlyFees']);
+        Route::post('/send-reminders', [\App\Http\Controllers\Api\FeeManagementController::class, 'sendReminders']);
+    });
+    
+    // Job Status Polling
+    Route::prefix('jobs')->group(function () {
+        Route::get('/batch/{batchId}/status', [\App\Http\Controllers\Api\JobStatusController::class, 'getBatchStatus']);
     });
 
     Route::post('/result-sheet/store', [ResultSheetController::class, 'store']);
@@ -332,9 +415,26 @@ Route::middleware(['auth:api', 'merchant_verification'])->group(function () {
 
     // Settings endpoints
     Route::prefix('settings')->group(function () {
+        // General Settings
         Route::get('/general', [SettingsController::class, 'getGeneralSettings']);
         Route::post('/general', [SettingsController::class, 'saveGeneralSettings']);
         Route::get('/check-school', [SettingsController::class, 'checkSchoolExists']);
+        
+        // Notification Settings (✅ NOW AVAILABLE)
+        Route::get('/notifications', [SettingsController::class, 'getNotificationSettings']);
+        Route::post('/notifications', [SettingsController::class, 'saveNotificationSettings']);
+        
+        // School Profile endpoints (comprehensive)
+        Route::prefix('school')->group(function () {
+            Route::get('/', [SchoolProfileController::class, 'index']);
+            Route::post('/', [SchoolProfileController::class, 'store']);
+            Route::post('/logo', [SchoolProfileController::class, 'uploadLogo']);
+            Route::delete('/logo', [SchoolProfileController::class, 'deleteLogo']);
+            Route::get('/onboarding-status', [SchoolProfileController::class, 'getOnboardingStatus']);
+            Route::get('/checklist', [SchoolProfileController::class, 'getChecklist']);
+            Route::post('/generate-code', [SchoolProfileController::class, 'generateCode']);
+            Route::post('/mark-completed', [SchoolProfileController::class, 'markAsCompleted']);
+        });
     });
 
     // Statistics endpoint
@@ -403,30 +503,8 @@ Route::middleware(['auth:api', 'merchant_verification'])->group(function () {
         });
     });
 
-    // Direct messaging routes (without messaging prefix)
-    Route::prefix('channels')->group(function () {
-        Route::get('/', [ChannelController::class, 'index']);
-        Route::post('/', [ChannelController::class, 'store']);
-        Route::get('/{channelId}', [ChannelController::class, 'show']);
-        Route::post('/{channelId}', [ChannelController::class, 'update']);
-        Route::delete('/{channelId}', [ChannelController::class, 'destroy']);
-        Route::post('/{channelId}/members', [ChannelController::class, 'addMember']);
-        Route::delete('/{channelId}/members/{memberId}', [ChannelController::class, 'removeMember']);
-        Route::post('/{channelId}/leave', [ChannelController::class, 'leave']);
-        Route::get('/{channelId}/available-users', [ChannelController::class, 'getAvailableUsers']);
-    });
-
-    Route::prefix('channels/{channelId}/messages')->group(function () {
-        Route::get('/', [MessageController::class, 'index']);
-        Route::post('/', [MessageController::class, 'store']);
-        Route::post('/{messageId}', [MessageController::class, 'update']);
-
-        Route::delete('/{messageId}', [MessageController::class, 'destroy']);
-        Route::post('/{messageId}/reactions', [MessageController::class, 'addReaction']);
-        Route::delete('/{messageId}/reactions', [MessageController::class, 'removeReaction']);
-        Route::post('/{messageId}/pin', [MessageController::class, 'togglePin']);
-        Route::get('/{messageId}/replies', [MessageController::class, 'getThreadReplies']);
-    });
+    // Note: Channels routes are defined below in the auth:api middleware group (line 470+)
+    // Duplicate routes removed to avoid conflicts
 
     // User Management Routes
     Route::prefix('users')->group(function () {
@@ -473,11 +551,14 @@ Route::middleware(['auth:api'])->group(function () {
         Route::post('/', [App\Http\Controllers\Api\ChannelController::class, 'store']);
         Route::get('/search', [App\Http\Controllers\Api\ChannelController::class, 'search']);
         Route::get('/{id}', [App\Http\Controllers\Api\ChannelController::class, 'show']);
+        Route::get('/{id}/messages', [App\Http\Controllers\Api\ChannelController::class, 'getMessages']); // FIX: Add messages endpoint
         Route::put('/{id}', [App\Http\Controllers\Api\ChannelController::class, 'update']);
         Route::delete('/{id}', [App\Http\Controllers\Api\ChannelController::class, 'destroy']);
         Route::post('/{id}/join', [App\Http\Controllers\Api\ChannelController::class, 'join']);
         Route::post('/{id}/leave', [App\Http\Controllers\Api\ChannelController::class, 'leave']);
         Route::post('/{id}/members', [App\Http\Controllers\Api\ChannelController::class, 'addMembers']);
+        Route::post('/{id}/mute', [App\Http\Controllers\Api\ChannelController::class, 'mute']); // Add mute endpoint
+        Route::post('/{id}/unmute', [App\Http\Controllers\Api\ChannelController::class, 'unmute']); // Add unmute endpoint
     });
 
     // Messages
@@ -491,7 +572,6 @@ Route::middleware(['auth:api'])->group(function () {
         Route::get('/search', [App\Http\Controllers\Api\MessageController::class, 'search'])->middleware('throttle:20,1');
     });
 
-    // Direct Messages
     Route::prefix('direct-messages')->group(function () {
         Route::get('/conversations', [App\Http\Controllers\Api\DirectMessageController::class, 'conversations']);
         Route::post('/conversations', [App\Http\Controllers\Api\DirectMessageController::class, 'startConversation']);
@@ -502,6 +582,17 @@ Route::middleware(['auth:api'])->group(function () {
         Route::post('/messages/{id}/reactions', [App\Http\Controllers\Api\DirectMessageController::class, 'addReaction']);
         Route::delete('/messages/{id}/reactions', [App\Http\Controllers\Api\DirectMessageController::class, 'removeReaction']);
         Route::post('/conversations/{id}/leave', [App\Http\Controllers\Api\DirectMessageController::class, 'leaveConversation']);
+        Route::post('/conversations/{id}/typing', [App\Http\Controllers\Api\DirectMessageController::class, 'typing']);
+        Route::post('/conversations/{id}/stop-typing', [App\Http\Controllers\Api\DirectMessageController::class, 'stopTyping']);
+    });
+
+    Route::prefix('calls')->group(function () {
+        Route::post('/initiate', [App\Http\Controllers\Api\CallController::class, 'initiateCall']);
+        Route::post('/answer', [App\Http\Controllers\Api\CallController::class, 'answerCall']);
+        Route::post('/end', [App\Http\Controllers\Api\CallController::class, 'endCall']);
+        Route::post('/ice-candidate', [App\Http\Controllers\Api\CallController::class, 'sendIceCandidate']);
+        Route::post('/offer', [App\Http\Controllers\Api\CallController::class, 'sendOffer']);
+        Route::post('/answer-webrtc', [App\Http\Controllers\Api\CallController::class, 'sendAnswer']);
     });
 
     // Presence and Typing
@@ -516,6 +607,20 @@ Route::middleware(['auth:api'])->group(function () {
 
     // Get assignable users (admins, teachers, students)
     Route::get('/users/assignable', [App\Http\Controllers\Api\UserListController::class, 'getAssignableUsers']);
+
+    // Notifications
+    Route::prefix('notifications')->group(function () {
+        Route::get('/', [App\Http\Controllers\Api\NotificationController::class, 'index']);
+        Route::get('/unread-count', [App\Http\Controllers\Api\NotificationController::class, 'unreadCount']);
+        Route::put('/{id}/read', [App\Http\Controllers\Api\NotificationController::class, 'markAsRead']);
+        Route::post('/mark-all-read', [App\Http\Controllers\Api\NotificationController::class, 'markAllAsRead']);
+    });
+
+    // Push Notifications
+    Route::prefix('push')->group(function () {
+        Route::post('/subscribe', [App\Http\Controllers\Api\PushNotificationController::class, 'subscribe']);
+        Route::post('/unsubscribe', [App\Http\Controllers\Api\PushNotificationController::class, 'unsubscribe']);
+    });
 
     // Ticket System Routes
     Route::prefix('tickets')->group(function () {

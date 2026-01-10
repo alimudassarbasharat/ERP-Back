@@ -18,7 +18,7 @@ return new class extends Migration
             $table->enum('status', ['active', 'inactive'])->default('active');
             $table->unsignedBigInteger('created_by')->nullable();
             $table->unsignedBigInteger('updated_by')->nullable();
-            $table->unsignedBigInteger('merchant_id')->nullable();
+            $table->string('merchant_id')->nullable(); // String to match users/admins table
             $table->timestamps();
             $table->softDeletes();
         });

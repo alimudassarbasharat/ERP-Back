@@ -11,6 +11,7 @@ class GetStudentsPaginatedRequest extends FormRequest
     public function rules(): array
     {
         return [
+            'merchant_id' => 'nullable|string',
             'session_id' => 'nullable|exists:sessions,id',
             'class_id' => 'required|exists:classes,id',
             'section_id' => 'required|exists:sections,id',

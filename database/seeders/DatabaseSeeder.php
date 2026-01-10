@@ -115,5 +115,8 @@ class DatabaseSeeder extends Seeder
 
         // 8. Seed demo relational data for common tables (idempotent)
         $this->call(DemoDataSeeder::class);
+        
+        // 9. Seed exam management demo data (optional, run separately if needed)
+        // $this->call(ExamManagementDemoSeeder::class);
     }
 }

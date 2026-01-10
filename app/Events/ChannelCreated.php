@@ -24,7 +24,12 @@ class ChannelCreated implements ShouldBroadcast
 
     public function broadcastOn()
     {
-        return new PrivateChannel('workspace.channels');
+        // Broadcast to all channel members so they see it in sidebar
+        $channels = [];
+        foreach ($this->channel->users as $member) {
+            $channels[] = new PrivateChannel('user.' . $member->id);
+        }
+        return $channels;
     }
 
     public function broadcastWith()

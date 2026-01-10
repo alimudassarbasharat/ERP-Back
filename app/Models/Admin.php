@@ -14,6 +14,16 @@ class Admin extends Authenticatable
     use HasFactory, HasApiTokens, HasRoles, SoftDeletes;
 
     protected $guarded = [];
+    
+    protected $fillable = [
+        'name',
+        'email',
+        'password',
+        'phone_number',
+        'role_id',
+        'status',
+        'merchant_id',
+    ];
 
     protected $hidden = [
         'password',

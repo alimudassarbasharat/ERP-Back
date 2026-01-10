@@ -14,14 +14,19 @@ class EventController extends Controller
 {
     public function index()
     {
-        $events = Event::where('user_id', Auth::id())
-            ->orWhere('type', 'holiday')
+        // TenantScope automatically filters by merchant_id
+        // Additional filtering by user_id for personal events or holidays
+        $events = Event::where(function($query) {
+                $query->where('user_id', Auth::id())
+                    ->orWhere('type', 'holiday');
+            })
             ->get();
         return EventResponse::list($events);
     }
 
     public function store(EventRequest $request)
     {
+        // TenantScope automatically sets merchant_id from authenticated user
         $event = Event::create([
             'title' => $request->title,
             'description' => $request->description,

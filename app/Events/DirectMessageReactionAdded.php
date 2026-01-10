@@ -2,7 +2,7 @@
 
 namespace App\Events;
 
-use App\Models\Message;
+use App\Models\DirectMessage;
 use App\Models\MessageReaction;
 use Illuminate\Broadcasting\PrivateChannel;
 use Illuminate\Contracts\Broadcasting\ShouldBroadcast;
@@ -17,7 +17,7 @@ class DirectMessageReactionAdded implements ShouldBroadcast
     public $message;
     public $reaction;
 
-    public function __construct(Message $message, MessageReaction $reaction)
+    public function __construct(DirectMessage $message, MessageReaction $reaction)
     {
         $this->message = $message;
         $this->reaction = $reaction;

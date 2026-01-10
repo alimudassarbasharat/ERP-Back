@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Traits\TenantScope;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -9,6 +10,8 @@ use Illuminate\Database\Eloquent\Relations\MorphMany;
 
 class Message extends Model
 {
+    use TenantScope;
+
     protected $fillable = [
         'channel_id',
         'user_id',
@@ -18,7 +21,8 @@ class Message extends Model
         'parent_id',
         'is_edited',
         'edited_at',
-        'is_deleted'
+        'is_deleted',
+        'merchant_id'
     ];
 
     protected $casts = [

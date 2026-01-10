@@ -6,24 +6,49 @@ use App\Http\Controllers\Controller;
 use App\Models\Channel;
 use App\Models\Message;
 use App\Models\MessageAttachment;
+use App\Services\UserService;
+use App\Services\PushNotificationService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Facades\Log;
 
 class MessageController extends Controller
 {
+    protected $userService;
+    protected $pushService;
+
+    public function __construct(UserService $userService, PushNotificationService $pushService)
+    {
+        $this->userService = $userService;
+        $this->pushService = $pushService;
+    }
     /**
      * Send a message to a channel
      */
     public function sendToChannel($channelId, Request $request)
     {
         $authUser = Auth::user();
-        $user = $authUser instanceof \App\Models\Admin ? $authUser->user : $authUser;
+        $user = $this->userService->getUserFromAuth($authUser);
+        
         if (!$user) {
-            return response()->json(['success' => false, 'message' => 'Unauthorized'], 401);
+            return response()->json([
+                'success' => false, 
+                'message' => 'User not found. Please contact administrator.'
+            ], 404);
         }
         $channel = Channel::findOrFail($channelId);
+        
+        // CRITICAL FIX: Verify tenant scoping
+        $merchantId = $user->merchant_id ?? request()->attributes->get('merchant_id') ?? 'DEFAULT_TENANT';
+        
+        if ($channel->merchant_id !== $merchantId) {
+            return response()->json([
+                'success' => false,
+                'message' => 'You do not have access to this channel'
+            ], 403);
+        }
 
         // Check if user is member
         if (!$channel->isUserMember($user)) {
@@ -66,14 +91,15 @@ class MessageController extends Controller
         // Extract mentions from content
         $mentions = $this->extractMentions($content);
         
-        // Create message
+        // CRITICAL FIX: Ensure merchant_id is set on message
         $message = Message::create([
             'channel_id' => $channel->id,
             'user_id' => $user->id,
             'content' => $content,
             'parent_id' => $request->parent_id,
             'type' => $request->hasFile('attachments') ? 'file' : 'text',
-            'metadata' => array_merge($request->metadata ?? [], ['mentions' => $mentions])
+            'metadata' => array_merge($request->metadata ?? [], ['mentions' => $mentions]),
+            'merchant_id' => $merchantId // CRITICAL: Set merchant_id for tenant scoping
         ]);
 
         // Handle attachments
@@ -104,15 +130,87 @@ class MessageController extends Controller
         // Update channel's updated_at
         $channel->touch();
 
-        // Increment unread count for other members
-        $channel->users()
+        // Increment unread count for other members (only if not muted)
+        // Method handles excluding sender and muted users
+        $channel->incrementUnreadCount($user);
+        
+        // Broadcast unread count updates for all affected members
+        $otherMembers = $channel->users()
             ->where('user_id', '!=', $user->id)
-            ->each(function ($member) use ($channel) {
-                $channel->incrementUnreadCount($member);
-            });
+            ->wherePivot('is_muted', false)
+            ->get();
+        
+        $merchantId = $user->merchant_id ?? request()->attributes->get('merchant_id') ?? 'DEFAULT_TENANT';
+        
+        foreach ($otherMembers as $member) {
+            // Get updated unread count
+            $memberPivot = $channel->users()
+                ->where('user_id', $member->id)
+                ->first();
+            
+            $unreadCount = $memberPivot ? $memberPivot->pivot->unread_count : 0;
+            
+            // Broadcast unread count update
+            broadcast(new \App\Events\UnreadCountUpdated($member, 'channel', $channel->id, $unreadCount))->toOthers();
+            
+            // CRITICAL: Create notification in database and broadcast
+            \App\Models\MessageNotification::create([
+                'user_id' => $member->id,
+                'message_id' => $message->id,
+                'message_type' => 'channel_message',
+                'conversation_id' => $channel->id,
+                'conversation_type' => 'channel',
+                'conversation_name' => $channel->name,
+                'sender_id' => $user->id,
+                'sender_name' => $user->name,
+                'message_preview' => substr($request->content ?? '', 0, 200),
+                'is_read' => false,
+                'merchant_id' => $merchantId
+            ]);
+            
+            // Broadcast realtime notification
+            broadcast(new \App\Events\ChannelNotification($member, $message, $channel, $user))->toOthers();
+            
+            // CRITICAL: Send web push notification (works even when site is closed)
+            if ($this->pushService) {
+                try {
+                    $this->pushService->sendChannelNotification(
+                        $member,
+                        $user->name,
+                        $channel->name,
+                        substr($request->content ?? '', 0, 200),
+                        $channel->id
+                    );
+                } catch (\Exception $e) {
+                    // Log but don't fail the request if push fails
+                    Log::error('[Push] Failed to send push notification for channel:', [
+                        'user_id' => $member->id,
+                        'error' => $e->getMessage()
+                    ]);
+                }
+            }
+        }
 
         // Load relationships
         $message->load(['user:id,name,avatar', 'attachments', 'reactions']);
+
+        // Handle mentions
+        if ($request->content) {
+            $mentionedUsernames = \App\Helpers\MentionHelper::extractMentionedUsernames($request->content);
+            if (!empty($mentionedUsernames)) {
+                $channelUsers = $channel->users()->get();
+                
+                foreach ($mentionedUsernames as $username) {
+                    $mentionedUser = $channelUsers->first(function ($u) use ($username) {
+                        return stripos($u->name ?? '', $username) !== false;
+                    });
+                    
+                    if ($mentionedUser && $mentionedUser->id !== $user->id) {
+                        broadcast(new \App\Events\UserMentioned($mentionedUser, $message, $channel, $user))->toOthers();
+                    }
+                }
+            }
+        }
 
         // Broadcast message
         broadcast(new \App\Events\MessageSent($message, $channel))->toOthers();
@@ -229,7 +327,16 @@ class MessageController extends Controller
      */
     public function addReaction($id, Request $request)
     {
-        $user = Auth::user();
+        $authUser = Auth::user();
+        $user = $this->userService->getUserFromAuth($authUser);
+        
+        if (!$user) {
+            return response()->json([
+                'success' => false, 
+                'message' => 'User not found. Please contact administrator.'
+            ], 404);
+        }
+        
         $message = Message::findOrFail($id);
 
         // Check if user can react
@@ -267,7 +374,16 @@ class MessageController extends Controller
      */
     public function removeReaction($id, Request $request)
     {
-        $user = Auth::user();
+        $authUser = Auth::user();
+        $user = $this->userService->getUserFromAuth($authUser);
+        
+        if (!$user) {
+            return response()->json([
+                'success' => false, 
+                'message' => 'User not found. Please contact administrator.'
+            ], 404);
+        }
+        
         $message = Message::findOrFail($id);
 
         $validator = Validator::make($request->all(), [
@@ -297,7 +413,15 @@ class MessageController extends Controller
      */
     public function search(Request $request)
     {
-        $user = Auth::user();
+        $authUser = Auth::user();
+        $user = $this->userService->getUserFromAuth($authUser);
+        
+        if (!$user) {
+            return response()->json([
+                'success' => false, 
+                'message' => 'User not found. Please contact administrator.'
+            ], 404);
+        }
         
         $validator = Validator::make($request->all(), [
             'query' => 'required|string|min:2',

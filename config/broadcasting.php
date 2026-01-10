@@ -62,6 +62,21 @@ return [
             'driver' => 'null',
         ],
 
+        'reverb' => [
+            'driver' => 'reverb',
+            'key' => env('REVERB_APP_KEY'),
+            'secret' => env('REVERB_APP_SECRET'),
+            'app_id' => env('REVERB_APP_ID'),
+            'options' => [
+                // CRITICAL: Use localhost/127.0.0.1 for broadcasting, NOT 0.0.0.0
+                // 0.0.0.0 is only for REVERB_SERVER_HOST (server listening)
+                'host' => env('REVERB_HOST', '127.0.0.1') === '0.0.0.0' ? '127.0.0.1' : env('REVERB_HOST', '127.0.0.1'),
+                'port' => env('REVERB_PORT', 8080),
+                'scheme' => env('REVERB_SCHEME', 'http'),
+                'useTLS' => env('REVERB_SCHEME', 'http') === 'https',
+            ],
+        ],
+
     ],
 
 ];

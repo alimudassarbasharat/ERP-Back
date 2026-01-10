@@ -2,6 +2,7 @@
 
 namespace App\Events;
 
+use App\Models\DirectMessageConversation;
 use App\Models\User;
 use Illuminate\Broadcasting\PrivateChannel;
 use Illuminate\Contracts\Broadcasting\ShouldBroadcast;
@@ -13,36 +14,33 @@ class UserStoppedTyping implements ShouldBroadcast
 {
     use Dispatchable, InteractsWithSockets, SerializesModels;
 
+    public $conversation;
     public $user;
-    public $type;
-    public $conversationId;
 
-    public function __construct(User $user, $type, $conversationId)
+    public function __construct(DirectMessageConversation $conversation, User $user)
     {
+        $this->conversation = $conversation;
         $this->user = $user;
-        $this->type = $type;
-        $this->conversationId = $conversationId;
     }
 
     public function broadcastOn()
     {
-        $channelName = $this->type === 'channel' 
-            ? 'channel.' . $this->conversationId 
-            : 'dm.' . $this->conversationId;
-            
-        return new PrivateChannel($channelName);
+        return new PrivateChannel('dm.' . $this->conversation->id);
     }
 
     public function broadcastWith()
     {
         return [
-            'user' => $this->user->only(['id', 'name', 'avatar']),
-            'type' => $this->type
+            'conversation_id' => $this->conversation->id,
+            'user' => [
+                'id' => $this->user->id,
+                'name' => $this->user->name
+            ]
         ];
     }
 
     public function broadcastAs()
     {
-        return 'user.stopped_typing';
+        return 'user.stopped-typing';
     }
 }

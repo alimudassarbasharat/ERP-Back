@@ -17,8 +17,13 @@ class FeeSummary extends Model
         return $this->hasMany(FeePayment::class, 'fee_summary_id');
     }
 
+    public function student()
+    {
+        return $this->belongsTo(Student::class);
+    }
+    
     public function class()
     {
-        return $this->hasMany(Classes::class, 'id');
+        return $this->belongsTo(Classes::class);
     }
 } 

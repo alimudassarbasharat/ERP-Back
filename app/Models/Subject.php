@@ -6,17 +6,20 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\SoftDeletes;
+use App\Traits\TenantScope;
 
 class Subject extends Model
 {
-    use HasFactory;
+    use HasFactory, SoftDeletes, TenantScope;
 
     protected $fillable = [
         'name',
         'code',
         'description',
         'credit_hours',
-        'is_active'
+        'is_active',
+        'merchant_id'
     ];
 
     protected $casts = [
@@ -31,7 +34,8 @@ class Subject extends Model
 
     public function classes(): BelongsToMany
     {
-        return $this->belongsToMany(Classes::class, 'class_subjects', 'subject_id', 'class_id');
+        return $this->belongsToMany(Classes::class, 'class_subjects', 'subject_id', 'class_id')
+            ->withTimestamps();
     }
 
     public function teachers(): BelongsToMany

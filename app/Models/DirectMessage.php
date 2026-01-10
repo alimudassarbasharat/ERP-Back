@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Traits\TenantScope;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -9,6 +10,8 @@ use Illuminate\Database\Eloquent\Relations\MorphMany;
 
 class DirectMessage extends Model
 {
+    use TenantScope;
+
     protected $fillable = [
         'conversation_id',
         'user_id',
@@ -17,7 +20,8 @@ class DirectMessage extends Model
         'metadata',
         'is_edited',
         'edited_at',
-        'is_deleted'
+        'is_deleted',
+        'merchant_id'
     ];
 
     protected $casts = [

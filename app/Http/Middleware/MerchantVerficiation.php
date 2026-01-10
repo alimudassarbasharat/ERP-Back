@@ -17,10 +17,31 @@ class MerchantVerficiation
     public function handle(Request $request, Closure $next)
     {
         $authUser = auth()->user();
-        if($authUser->merchant_id == null){
-            return response()->json(['message' => 'Merchant not found'], 404);
+        
+        if (!$authUser) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Unauthorized'
+            ], 401);
         }
-        $request['merchant_id'] = $authUser->merchant_id;
+        
+        // CRITICAL FIX: Don't block requests if merchant_id is null
+        // Use DEFAULT_TENANT as fallback to prevent blocking legitimate users
+        $merchantId = $authUser->merchant_id ?? 'DEFAULT_TENANT';
+        
+        // Log warning if merchant_id is missing (for debugging)
+        if (!$authUser->merchant_id) {
+            \Log::warning('Merchant ID not found for user in MerchantVerification middleware', [
+                'user_id' => $authUser->id,
+                'user_type' => get_class($authUser),
+                'email' => $authUser->email ?? 'N/A'
+            ]);
+        }
+        
+        // Add merchant_id to request attributes (more reliable than merge)
+        $request->attributes->set('merchant_id', $merchantId);
+        $request->merge(['merchant_id' => $merchantId]);
+        
         return $next($request);
     }
 }

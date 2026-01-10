@@ -2,7 +2,7 @@
 
 namespace App\Events;
 
-use App\Models\Message;
+use App\Models\DirectMessage;
 use Illuminate\Broadcasting\PrivateChannel;
 use Illuminate\Contracts\Broadcasting\ShouldBroadcast;
 use Illuminate\Foundation\Events\Dispatchable;
@@ -15,7 +15,7 @@ class DirectMessageEdited implements ShouldBroadcast
 
     public $message;
 
-    public function __construct(Message $message)
+    public function __construct(DirectMessage $message)
     {
         $this->message = $message;
     }

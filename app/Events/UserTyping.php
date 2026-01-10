@@ -2,9 +2,11 @@
 
 namespace App\Events;
 
+use App\Models\DirectMessageConversation;
 use App\Models\User;
 use Illuminate\Broadcasting\PrivateChannel;
 use Illuminate\Contracts\Broadcasting\ShouldBroadcast;
+use Illuminate\Contracts\Broadcasting\ShouldBroadcastNow;
 use Illuminate\Foundation\Events\Dispatchable;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Broadcasting\InteractsWithSockets;
@@ -13,31 +15,28 @@ class UserTyping implements ShouldBroadcast
 {
     use Dispatchable, InteractsWithSockets, SerializesModels;
 
+    public $conversation;
     public $user;
-    public $type;
-    public $conversationId;
 
-    public function __construct(User $user, $type, $conversationId)
+    public function __construct(DirectMessageConversation $conversation, User $user)
     {
+        $this->conversation = $conversation;
         $this->user = $user;
-        $this->type = $type; // 'channel' or 'dm'
-        $this->conversationId = $conversationId;
     }
 
     public function broadcastOn()
     {
-        $channelName = $this->type === 'channel' 
-            ? 'channel.' . $this->conversationId 
-            : 'dm.' . $this->conversationId;
-            
-        return new PrivateChannel($channelName);
+        return new PrivateChannel('dm.' . $this->conversation->id);
     }
 
     public function broadcastWith()
     {
         return [
-            'user' => $this->user->only(['id', 'name', 'avatar']),
-            'type' => $this->type
+            'conversation_id' => $this->conversation->id,
+            'user' => [
+                'id' => $this->user->id,
+                'name' => $this->user->name
+            ]
         ];
     }
 

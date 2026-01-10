@@ -16,7 +16,7 @@ class Kernel extends HttpKernel
     protected $middleware = [
         // \App\Http\Middleware\TrustHosts::class,
         \App\Http\Middleware\TrustProxies::class,
-        \Fruitcake\Cors\HandleCors::class,
+        \Illuminate\Http\Middleware\HandleCors::class,
         \App\Http\Middleware\PreventRequestsDuringMaintenance::class,
         \Illuminate\Foundation\Http\Middleware\ValidatePostSize::class,
         \App\Http\Middleware\TrimStrings::class,
@@ -68,5 +68,8 @@ class Kernel extends HttpKernel
         'role_or_permission' => \Spatie\Permission\Middleware\RoleOrPermissionMiddleware::class,
         'merchant_verification' => \App\Http\Middleware\MerchantVerficiation::class,
         'check_permission' => \App\Http\Middleware\CheckPermission::class,
+        'tenant' => \App\Http\Middleware\TenantMiddleware::class,
+        'onboarding' => \App\Http\Middleware\OnboardingMiddleware::class,
+        'session.required' => \App\Http\Middleware\EnsureSessionSelected::class,
     ];
 }

@@ -11,6 +11,8 @@ use App\Models\Student;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\Log;
 use Carbon\Carbon;
 
 class StudentController extends Controller
@@ -28,47 +30,154 @@ class StudentController extends Controller
             $monthFor = now()->format('Y-m-01');
         }
 
-        $query = Student::query()
-            ->select(
-                'students.*',
-                'classes.name as class_name',
-                'sections.name as section_name',
-                'family_infos.father_name as family_father_name',
-                DB::raw('COALESCE(fs.base_fee, fd.monthly_fee, 0) as monthly_fee'),
-                DB::raw('COALESCE(fs.carry_forward, 0) as prev_amount'),
-                DB::raw('COALESCE(fs.discount_amount, 0) as discount_amount'),
-                DB::raw('COALESCE(fs.late_fee, 0) as late_fee'),
-                DB::raw('COALESCE(fs.final_amount, fd.monthly_fee, 0) as total_amount'),
-                DB::raw('COALESCE(fs.partial_fee_paid, 0) as accumulated_paid'),
-                DB::raw('COALESCE(fs.final_amount, fd.monthly_fee, 0) - COALESCE(fs.partial_fee_paid, 0) as remaining_amount'),
-                DB::raw("COALESCE(fs.payment_status, 'unpaid') as status")
-            )
-            ->leftJoin('classes', 'students.class_id', '=', 'classes.id')
-            ->leftJoin('sections', 'students.section_id', '=', 'sections.id')
-            ->leftJoin('family_infos', 'students.id', '=', 'family_infos.student_id')
-            ->leftJoin('fee_defaults as fd', 'students.class_id', '=', 'fd.class_id')
-            ->leftJoin('fee_summaries as fs', function ($join) use ($monthFor) {
-                $join->on('students.id', '=', 'fs.student_id')
-                     ->where('fs.month_for', '=', $monthFor);
-            });
+        // Check if class_id column exists in students table
+        $hasClassId = Schema::hasColumn('students', 'class_id');
+        $hasSectionId = Schema::hasColumn('students', 'section_id');
 
-        // Search filter
+        // Build select array conditionally based on column existence
+        $selectArray = [
+            'students.*',
+            'family_infos.father_name as family_father_name',
+        ];
+
+        if ($hasClassId) {
+            $selectArray[] = 'classes.name as class_name';
+            $selectArray[] = DB::raw('COALESCE(fs.total_amount, fd.monthly_fee, 0) as monthly_fee');
+            $selectArray[] = DB::raw('COALESCE(fs.total_amount, fd.monthly_fee, 0) as total_amount');
+            $selectArray[] = DB::raw('COALESCE(fs.balance_amount, COALESCE(fs.total_amount, fd.monthly_fee, 0) - COALESCE(fs.paid_amount, 0), 0) as remaining_amount');
+        } else {
+            $selectArray[] = DB::raw('NULL as class_name');
+            $selectArray[] = DB::raw('COALESCE(fs.total_amount, 0) as monthly_fee');
+            $selectArray[] = DB::raw('COALESCE(fs.total_amount, 0) as total_amount');
+            $selectArray[] = DB::raw('COALESCE(fs.balance_amount, COALESCE(fs.total_amount, 0) - COALESCE(fs.paid_amount, 0), 0) as remaining_amount');
+        }
+
+        if ($hasSectionId) {
+            $selectArray[] = 'sections.name as section_name';
+        } else {
+            $selectArray[] = DB::raw('NULL as section_name');
+        }
+
+        // Common fee fields
+        $selectArray = array_merge($selectArray, [
+            DB::raw('0 as prev_amount'), // carry_forward column doesn't exist, using 0
+            DB::raw('COALESCE(fs.discount_amount, 0) as discount_amount'),
+            DB::raw('COALESCE(fs.fine_amount, 0) as late_fee'), // using fine_amount as late_fee
+            DB::raw('COALESCE(fs.paid_amount, 0) as accumulated_paid'), // using paid_amount instead of partial_fee_paid
+            DB::raw("COALESCE(fs.status, 'pending') as status") // using status instead of payment_status
+        ]);
+
+        $query = Student::query()->select($selectArray);
+
+        // Apply merchant_id filter (CRITICAL: Always filter by merchant_id)
+        $merchantId = $request->merchant_id 
+            ?? $request->attributes->get('merchant_id') 
+            ?? auth()->user()?->merchant_id 
+            ?? null;
+        
+        // Always filter by merchant_id if available
+        if ($merchantId) {
+            $query->where('students.merchant_id', $merchantId);
+        } else {
+            // If merchant_id is not available, log warning and return empty result for security
+            Log::warning('StudentController: merchant_id not found, filtering students', [
+                'user_id' => auth()->id(),
+                'request_path' => $request->path()
+            ]);
+            $query->whereRaw('1 = 0'); // Return no results if merchant_id is missing
+        }
+
+        // Only join classes if class_id column exists
+        if ($hasClassId) {
+            $query->leftJoin('classes', function ($join) use ($merchantId) {
+                $join->on('students.class_id', '=', 'classes.id');
+                if ($merchantId) {
+                    $join->where('classes.merchant_id', '=', $merchantId);
+                }
+            });
+            $query->leftJoin('fee_defaults as fd', function ($join) use ($merchantId) {
+                $join->on('students.class_id', '=', 'fd.class_id');
+                if ($merchantId) {
+                    $join->where('fd.merchant_id', '=', $merchantId);
+                }
+            });
+        }
+
+        // Only join sections if section_id column exists
+        if ($hasSectionId) {
+            $query->leftJoin('sections', function ($join) use ($merchantId) {
+                $join->on('students.section_id', '=', 'sections.id');
+                if ($merchantId) {
+                    $join->where('sections.merchant_id', '=', $merchantId);
+                }
+            });
+        }
+
+        $query->leftJoin('family_infos', function ($join) use ($merchantId) {
+            $join->on('students.id', '=', 'family_infos.student_id');
+            if ($merchantId) {
+                $join->where('family_infos.merchant_id', '=', $merchantId);
+            }
+        })
+        ->leftJoin('fee_summaries as fs', function ($join) use ($monthFor, $merchantId) {
+            $join->on('students.id', '=', 'fs.student_id')
+                 ->where('fs.month_for', '=', $monthFor);
+            if ($merchantId) {
+                $join->where('fs.merchant_id', '=', $merchantId);
+            }
+        });
+
+        // Search filter - Search across all columns using ILIKE (case-insensitive, PostgreSQL)
         if ($request->filled('search')) {
             $search = $request->input('search');
-            $query->where(function ($q) use ($search) {
-                $q->where('students.first_name', 'like', "%{$search}%")
-                    ->orWhere('students.last_name', 'like', "%{$search}%")
-                    ->orWhere('students.roll_number', 'like', "%{$search}%");
+            $query->where(function ($q) use ($search, $hasClassId, $hasSectionId) {
+                // Basic student fields - ILIKE is already case-insensitive in PostgreSQL
+                $q->where(DB::raw('students.first_name'), 'ILIKE', '%' . $search . '%')
+                    ->orWhere(DB::raw('students.last_name'), 'ILIKE', '%' . $search . '%')
+                    ->orWhere(DB::raw('COALESCE(students.first_name, \'\') || \' \' || COALESCE(students.last_name, \'\')'), 'ILIKE', '%' . $search . '%');
+                
+                // Search in roll_number if column exists
+                if (Schema::hasColumn('students', 'roll_number')) {
+                    $q->orWhere(DB::raw('CAST(students.roll_number AS TEXT)'), 'ILIKE', '%' . $search . '%');
+                }
+                
+                // Search in admission_number if column exists
+                if (Schema::hasColumn('students', 'admission_number')) {
+                    $q->orWhere(DB::raw('students.admission_number'), 'ILIKE', '%' . $search . '%');
+                }
+                
+                // Search in email if column exists
+                if (Schema::hasColumn('students', 'email')) {
+                    $q->orWhere(DB::raw('students.email'), 'ILIKE', '%' . $search . '%');
+                }
+                
+                // Search in phone_number if column exists
+                if (Schema::hasColumn('students', 'phone_number')) {
+                    $q->orWhere(DB::raw('students.phone_number'), 'ILIKE', '%' . $search . '%');
+                }
+                
+                // Search in class name if class_id exists
+                if ($hasClassId) {
+                    $q->orWhere(DB::raw('classes.name'), 'ILIKE', '%' . $search . '%');
+                }
+                
+                // Search in section name if section_id exists
+                if ($hasSectionId) {
+                    $q->orWhere(DB::raw('sections.name'), 'ILIKE', '%' . $search . '%');
+                }
+                
+                // Search in family father name
+                $q->orWhere(DB::raw('family_infos.father_name'), 'ILIKE', '%' . $search . '%');
             });
         }
     
-        // Class filter
-        if ($request->filled('class_id')) {
+        // Class filter (only if class_id column exists)
+        if ($request->filled('class_id') && $hasClassId) {
             $query->where('students.class_id', $request->class_id);
         }
     
-        // Section filter
-        if ($request->filled('section_id') && is_numeric($request->section_id)) {
+        // Section filter (only if section_id column exists)
+        if ($request->filled('section_id') && is_numeric($request->section_id) && $hasSectionId) {
             $query->where('students.section_id', $request->section_id);
         }
 
@@ -115,13 +224,12 @@ class StudentController extends Controller
         $perPage = $request->per_page ?? 10;
         $students = $query->paginate($perPage);
     
-        // Map class name (already selected as class_name)
-        $students->getCollection()->transform(function ($student) {
+        // Map class name (already selected as class_name) - transform items
+        foreach ($students->items() as $student) {
             $student->class = $student->class_name ?? '';
             $student->status = ucfirst($student->status);
             $student->remaining_amount = $student->status === 'Paid' ? 0 : $student->remaining_amount;
-            return $student;
-        });
+        }
     
         return response()->json([
             'status' => true,

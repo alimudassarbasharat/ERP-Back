@@ -22,7 +22,14 @@ class ChannelUpdated implements ShouldBroadcast
 
     public function broadcastOn()
     {
-        return new PrivateChannel('channel.' . $this->channel->id);
+        // CRITICAL: Broadcast to all channel members so sidebar updates for everyone
+        $channels = [];
+        foreach ($this->channel->users as $member) {
+            $channels[] = new PrivateChannel('user.' . $member->id);
+        }
+        // Also broadcast to channel channel for real-time updates
+        $channels[] = new PrivateChannel('channel.' . $this->channel->id);
+        return $channels;
     }
 
     public function broadcastWith()

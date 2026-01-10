@@ -25,6 +25,7 @@ class User extends Authenticatable
         'password',
         'avatar',
         'status',
+        'merchant_id',
     ];
 
     /**
@@ -49,9 +50,16 @@ class User extends Authenticatable
     // Messaging relationships
     public function channels()
     {
-        return $this->belongsToMany(Channel::class, 'channel_users')
+        // CRITICAL FIX: Query channels through channel_users pivot table
+        // This ensures members ALWAYS see channels they belong to
+        $merchantId = $this->merchant_id ?? 'DEFAULT_TENANT';
+        
+        return $this->belongsToMany(Channel::class, 'channel_users', 'user_id', 'channel_id')
+                    ->where('channels.merchant_id', $merchantId) // Tenant scope
+                    ->where('channels.is_archived', false) // Exclude archived
                     ->withPivot(['role', 'last_read_at', 'unread_count', 'is_muted', 'notification_preferences'])
-                    ->withTimestamps();
+                    ->withTimestamps()
+                    ->orderBy('channels.updated_at', 'desc');
     }
 
     public function createdChannels()

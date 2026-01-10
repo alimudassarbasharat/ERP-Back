@@ -24,8 +24,25 @@ class StoreSectionRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'name' => 'required|string|max:255|unique:sections',
+            'name' => [
+                'required',
+                'string',
+                'max:255',
+                function ($attribute, $value, $fail) {
+                    // Check for unique section name within same merchant (sections are global, not per class)
+                    $merchantId = auth()->user()->merchant_id ?? null;
+                    $exists = \App\Models\Section::where('name', $value)
+                        ->where('merchant_id', $merchantId)
+                        ->exists();
+                    
+                    if ($exists) {
+                        $fail('A section with this name already exists.');
+                    }
+                },
+            ],
             'description' => 'required|string',
+            'class_ids' => 'sometimes|array', // Optional: array of class IDs to assign
+            'class_ids.*' => 'exists:classes,id', // Each class ID must exist
         ];
     }
 
@@ -40,6 +57,8 @@ class StoreSectionRequest extends FormRequest
             'name.required' => 'Section name is required',
             'name.unique' => 'This section name already exists',
             'description.required' => 'Section description is required',
+            'class_ids.array' => 'Class IDs must be an array',
+            'class_ids.*.exists' => 'One or more selected classes do not exist',
         ];
     }
 

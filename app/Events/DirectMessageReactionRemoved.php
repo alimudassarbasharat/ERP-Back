@@ -2,7 +2,7 @@
 
 namespace App\Events;
 
-use App\Models\Message;
+use App\Models\DirectMessage;
 use App\Models\User;
 use Illuminate\Broadcasting\PrivateChannel;
 use Illuminate\Contracts\Broadcasting\ShouldBroadcast;
@@ -18,7 +18,7 @@ class DirectMessageReactionRemoved implements ShouldBroadcast
     public $emoji;
     public $user;
 
-    public function __construct(Message $message, $emoji, User $user)
+    public function __construct(DirectMessage $message, $emoji, User $user)
     {
         $this->message = $message;
         $this->emoji = $emoji;

@@ -23,10 +23,30 @@ class UpdateSectionRequest extends FormRequest
      */
     public function rules(): array
     {
+        $sectionId = $this->route('id');
+        
         return [
-            'name' => 'required|string|max:255|unique:sections,name,' . $this->route('id'),
+            'name' => [
+                'required',
+                'string',
+                'max:255',
+                function ($attribute, $value, $fail) use ($sectionId) {
+                    // Check for unique section name within same merchant (excluding current section)
+                    $merchantId = auth()->user()->merchant_id ?? null;
+                    $exists = \App\Models\Section::where('name', $value)
+                        ->where('merchant_id', $merchantId)
+                        ->where('id', '!=', $sectionId)
+                        ->exists();
+                    
+                    if ($exists) {
+                        $fail('A section with this name already exists.');
+                    }
+                },
+            ],
             'description' => 'required|string',
-            'status' => 'sometimes|in:active,inactive'
+            'status' => 'sometimes|in:active,inactive',
+            'class_ids' => 'sometimes|array', // Optional: array of class IDs to assign
+            'class_ids.*' => 'exists:classes,id', // Each class ID must exist
         ];
     }
 
@@ -41,7 +61,9 @@ class UpdateSectionRequest extends FormRequest
             'name.required' => 'Section name is required',
             'name.unique' => 'This section name already exists',
             'description.required' => 'Section description is required',
-            'status.in' => 'Status must be either active or inactive'
+            'status.in' => 'Status must be either active or inactive',
+            'class_ids.array' => 'Class IDs must be an array',
+            'class_ids.*.exists' => 'One or more selected classes do not exist',
         ];
     }
 

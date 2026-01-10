@@ -4,12 +4,15 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\SoftDeletes;
+use App\Traits\TenantScope;
 
 class Event extends Model
 {
-    use HasFactory;
+    use HasFactory, SoftDeletes, TenantScope;
 
     protected $fillable = [
+        'merchant_id',
         'title',
         'description',
         'start_date',

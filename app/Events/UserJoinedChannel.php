@@ -26,13 +26,20 @@ class UserJoinedChannel implements ShouldBroadcast
 
     public function broadcastOn()
     {
-        return new PrivateChannel('channel.' . $this->channel->id);
+        // CRITICAL: Broadcast to user's private channel so they see channel in sidebar immediately
+        // Also broadcast to channel so other members see the update
+        return [
+            new PrivateChannel('user.' . $this->user->id), // For the new member
+            new PrivateChannel('channel.' . $this->channel->id) // For existing members
+        ];
     }
 
     public function broadcastWith()
     {
+        // CRITICAL FIX: Include channel data so frontend can add it to sidebar immediately
         return [
-            'user' => $this->user->only(['id', 'name', 'avatar'])
+            'user' => $this->user->only(['id', 'name', 'avatar']),
+            'channel' => $this->channel->load(['creator:id,name,avatar', 'latestMessage.user:id,name,avatar'])
         ];
     }
 

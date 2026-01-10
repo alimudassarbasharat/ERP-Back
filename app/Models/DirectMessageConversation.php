@@ -2,15 +2,20 @@
 
 namespace App\Models;
 
+use App\Traits\TenantScope;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Facades\DB;
 
 class DirectMessageConversation extends Model
 {
+    use TenantScope;
+
     protected $fillable = [
         'name',
-        'is_group'
+        'is_group',
+        'merchant_id'
     ];
 
     protected $casts = [
@@ -77,14 +82,23 @@ class DirectMessageConversation extends Model
 
     public function incrementUnreadCount(User $user)
     {
-        $this->participants()
+        // Increment unread_count in the pivot table for all participants except the sender
+        // Use DB::table to directly update the pivot table
+        DB::table('direct_message_participants')
+            ->where('conversation_id', $this->id)
             ->where('user_id', '!=', $user->id)
-            ->increment('direct_message_participants.unread_count');
+            ->increment('unread_count');
     }
 
-    public static function findOrCreateBetweenUsers($user1Id, $user2Id)
+    public static function findOrCreateBetweenUsers($user1Id, $user2Id, $merchantId = null)
     {
-        // Find existing conversation between two users
+        // Get merchant_id if not provided
+        if (!$merchantId) {
+            $user = User::find($user1Id);
+            $merchantId = $user->merchant_id ?? self::getCurrentMerchantId();
+        }
+
+        // Find existing conversation between two users within the same merchant
         $conversation = self::whereHas('participants', function ($query) use ($user1Id) {
                 $query->where('user_id', $user1Id);
             })
@@ -92,13 +106,32 @@ class DirectMessageConversation extends Model
                 $query->where('user_id', $user2Id);
             })
             ->where('is_group', false)
+            ->where('merchant_id', $merchantId)
             ->first();
 
         if (!$conversation) {
-            $conversation = self::create(['is_group' => false]);
+            $conversation = self::create([
+                'is_group' => false,
+                'merchant_id' => $merchantId
+            ]);
             $conversation->participants()->attach([$user1Id, $user2Id]);
         }
 
         return $conversation;
+    }
+
+    /**
+     * Get current merchant_id (helper method)
+     */
+    protected static function getCurrentMerchantId()
+    {
+        $user = auth()->user();
+        if ($user && isset($user->merchant_id)) {
+            return $user->merchant_id;
+        }
+        if (request() && request()->attributes->has('merchant_id')) {
+            return request()->attributes->get('merchant_id');
+        }
+        return null;
     }
 }

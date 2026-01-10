@@ -97,7 +97,13 @@ class FeeManagementController extends Controller
     {
         $query = LateFee::query();
         if ($request->filled('merchant_id')) {
-            $query->where('merchant_id', $request->merchant_id);
+            $merchantId = $request->merchant_id;
+            // Only filter by merchant_id if it's numeric (bigint column)
+            // Skip filter for string merchant_ids like "SUPER123"
+            if (is_numeric($merchantId)) {
+                $query->where('merchant_id', (int)$merchantId);
+            }
+            // For non-numeric merchant_ids, return all records or handle as needed
         }
         $lateFees = $query->orderBy('id', 'desc')->paginate($request->per_page ?? 10);
         return response()->json([
