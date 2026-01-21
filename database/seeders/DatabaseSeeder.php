@@ -21,62 +21,62 @@ class DatabaseSeeder extends Seeder
         
         // 1. Create roles
         $roles = [
-            ['id' => 1, 'name' => 'super-admin', 'guard_name' => 'web'],
-            ['id' => 2, 'name' => 'admin', 'guard_name' => 'web'],
-            ['id' => 3, 'name' => 'teacher', 'guard_name' => 'web'],
-            ['id' => 4, 'name' => 'student', 'guard_name' => 'web'],
+            ['id' => 1, 'name' => 'super-admin', 'guard_name' => 'web', 'merchant_id' => 'DEFAULT_TENANT'],
+            ['id' => 2, 'name' => 'admin', 'guard_name' => 'web', 'merchant_id' => 'DEFAULT_TENANT'],
+            ['id' => 3, 'name' => 'teacher', 'guard_name' => 'web', 'merchant_id' => 'DEFAULT_TENANT'],
+            ['id' => 4, 'name' => 'student', 'guard_name' => 'web', 'merchant_id' => 'DEFAULT_TENANT'],
         ];
 
         foreach ($roles as $role) {
-            DB::statement("INSERT INTO roles (id, name, guard_name, created_at, updated_at) VALUES (?, ?, ?, ?, ?) ON CONFLICT (id) DO NOTHING", [
-                $role['id'], $role['name'], $role['guard_name'], now(), now()
+            DB::statement("INSERT INTO roles (id, name, guard_name, merchant_id, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?) ON CONFLICT (id) DO NOTHING", [
+                $role['id'], $role['name'], $role['guard_name'], $role['merchant_id'], now(), now()
             ]);
         }
 
         // 2. Create permissions
         $permissions = [
-            ['id' => 1, 'name' => 'manage-users', 'guard_name' => 'web'],
-            ['id' => 2, 'name' => 'manage-students', 'guard_name' => 'web'],
-            ['id' => 3, 'name' => 'view-reports', 'guard_name' => 'web'],
+            ['id' => 1, 'name' => 'manage-users', 'guard_name' => 'web', 'merchant_id' => 'DEFAULT_TENANT'],
+            ['id' => 2, 'name' => 'manage-students', 'guard_name' => 'web', 'merchant_id' => 'DEFAULT_TENANT'],
+            ['id' => 3, 'name' => 'view-reports', 'guard_name' => 'web', 'merchant_id' => 'DEFAULT_TENANT'],
         ];
 
         foreach ($permissions as $permission) {
-            DB::statement("INSERT INTO permissions (id, name, guard_name, created_at, updated_at) VALUES (?, ?, ?, ?, ?) ON CONFLICT (id) DO NOTHING", [
-                $permission['id'], $permission['name'], $permission['guard_name'], now(), now()
+            DB::statement("INSERT INTO permissions (id, name, guard_name, merchant_id, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?) ON CONFLICT (id) DO NOTHING", [
+                $permission['id'], $permission['name'], $permission['guard_name'], $permission['merchant_id'], now(), now()
             ]);
         }
 
         // 3. Create departments
         $departments = [
-            ['id' => 1, 'name' => 'Computer Science', 'code' => 'CS', 'status' => true],
-            ['id' => 2, 'name' => 'Mathematics', 'code' => 'MATH', 'status' => true],
-            ['id' => 3, 'name' => 'English', 'code' => 'ENG', 'status' => true],
+            ['id' => 1, 'name' => 'Computer Science', 'code' => 'CS', 'status' => true, 'merchant_id' => 'DEFAULT_TENANT'],
+            ['id' => 2, 'name' => 'Mathematics', 'code' => 'MATH', 'status' => true, 'merchant_id' => 'DEFAULT_TENANT'],
+            ['id' => 3, 'name' => 'English', 'code' => 'ENG', 'status' => true, 'merchant_id' => 'DEFAULT_TENANT'],
         ];
 
         foreach ($departments as $dept) {
-            DB::statement("INSERT INTO departments (id, name, code, status, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?) ON CONFLICT (id) DO NOTHING", [
-                $dept['id'], $dept['name'], $dept['code'], $dept['status'], now(), now()
+            DB::statement("INSERT INTO departments (id, name, code, status, merchant_id, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?) ON CONFLICT (id) DO NOTHING", [
+                $dept['id'], $dept['name'], $dept['code'], $dept['status'], $dept['merchant_id'], now(), now()
             ]);
         }
 
         // 4. Create academic years
         $academicYears = [
-            ['id' => 1, 'name' => '2024-2025', 'start_date' => '2024-04-01', 'end_date' => '2025-03-31', 'is_active' => true],
-            ['id' => 2, 'name' => '2025-2026', 'start_date' => '2025-04-01', 'end_date' => '2026-03-31', 'is_active' => false],
+            ['id' => 1, 'name' => '2024-2025', 'start_date' => '2024-04-01', 'end_date' => '2025-03-31', 'is_active' => true, 'merchant_id' => 'DEFAULT_TENANT'],
+            ['id' => 2, 'name' => '2025-2026', 'start_date' => '2025-04-01', 'end_date' => '2026-03-31', 'is_active' => false, 'merchant_id' => 'DEFAULT_TENANT'],
         ];
 
         foreach ($academicYears as $year) {
-            DB::statement("INSERT INTO academic_years (id, name, start_date, end_date, is_active, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?) ON CONFLICT (id) DO NOTHING", [
-                $year['id'], $year['name'], $year['start_date'], $year['end_date'], $year['is_active'], now(), now()
+            DB::statement("INSERT INTO academic_years (id, name, start_date, end_date, is_active, merchant_id, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?) ON CONFLICT (id) DO NOTHING", [
+                $year['id'], $year['name'], $year['start_date'], $year['end_date'], $year['is_active'], $year['merchant_id'], now(), now()
             ]);
         }
 
         // 5. Create users
-        DB::statement("INSERT INTO users (name, email, password, status, created_at, updated_at) VALUES ('Test User', 'user@test.com', ?, 'active', ?, ?) ON CONFLICT (email) DO NOTHING", [
+        DB::statement("INSERT INTO users (name, email, password, status, merchant_id, created_at, updated_at) VALUES ('Test User', 'user@test.com', ?, 'active', 'DEFAULT_TENANT', ?, ?) ON CONFLICT (email) DO NOTHING", [
             Hash::make('password'), now(), now()
         ]);
 
-        DB::statement("INSERT INTO users (name, email, password, status, created_at, updated_at) VALUES ('Teacher User', 'teacher@test.com', ?, 'active', ?, ?) ON CONFLICT (email) DO NOTHING", [
+        DB::statement("INSERT INTO users (name, email, password, status, merchant_id, created_at, updated_at) VALUES ('Teacher User', 'teacher@test.com', ?, 'active', 'DEFAULT_TENANT', ?, ?) ON CONFLICT (email) DO NOTHING", [
             Hash::make('password'), now(), now()
         ]);
 

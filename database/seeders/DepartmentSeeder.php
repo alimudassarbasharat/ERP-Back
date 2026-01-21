@@ -20,6 +20,7 @@ class DepartmentSeeder extends Seeder
                 'code' => 'ADMIN',
                 'description' => 'Administrative department',
                 'status' => true,
+                'merchant_id' => 'DEFAULT_TENANT',
                 'created_at' => now(),
                 'updated_at' => now()
             ],
@@ -28,6 +29,7 @@ class DepartmentSeeder extends Seeder
                 'code' => 'ACAD',
                 'description' => 'Academic affairs department',
                 'status' => true,
+                'merchant_id' => 'DEFAULT_TENANT',
                 'created_at' => now(),
                 'updated_at' => now()
             ],
@@ -37,6 +39,7 @@ class DepartmentSeeder extends Seeder
                 'description' => 'Science department',
                 'parent_id' => 2, // Under Academic
                 'status' => true,
+                'merchant_id' => 'DEFAULT_TENANT',
                 'created_at' => now(),
                 'updated_at' => now()
             ],
@@ -46,6 +49,7 @@ class DepartmentSeeder extends Seeder
                 'description' => 'Mathematics department',
                 'parent_id' => 2, // Under Academic
                 'status' => true,
+                'merchant_id' => 'DEFAULT_TENANT',
                 'created_at' => now(),
                 'updated_at' => now()
             ],
@@ -55,6 +59,7 @@ class DepartmentSeeder extends Seeder
                 'description' => 'English language department',
                 'parent_id' => 2, // Under Academic
                 'status' => true,
+                'merchant_id' => 'DEFAULT_TENANT',
                 'created_at' => now(),
                 'updated_at' => now()
             ],
@@ -63,6 +68,7 @@ class DepartmentSeeder extends Seeder
                 'code' => 'FIN',
                 'description' => 'Finance and accounts department',
                 'status' => true,
+                'merchant_id' => 'DEFAULT_TENANT',
                 'created_at' => now(),
                 'updated_at' => now()
             ],
@@ -71,6 +77,7 @@ class DepartmentSeeder extends Seeder
                 'code' => 'HR',
                 'description' => 'Human resources department',
                 'status' => true,
+                'merchant_id' => 'DEFAULT_TENANT',
                 'created_at' => now(),
                 'updated_at' => now()
             ],
@@ -79,6 +86,7 @@ class DepartmentSeeder extends Seeder
                 'code' => 'IT',
                 'description' => 'Information technology department',
                 'status' => true,
+                'merchant_id' => 'DEFAULT_TENANT',
                 'created_at' => now(),
                 'updated_at' => now()
             ]

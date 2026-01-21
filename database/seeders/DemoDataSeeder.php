@@ -36,6 +36,7 @@ class DemoDataSeeder extends Seeder
         $classNames = ['Nursery', 'Prep', 'Class 1', 'Class 2', 'Class 3', 'Class 4', 'Class 5', 'Class 6', 'Class 7', 'Class 8', 'Class 9', 'Class 10'];
         foreach ($classNames as $name) {
             $row = [
+                'merchant_id' => 'DEFAULT_TENANT',
                 'created_at' => now(),
                 'updated_at' => now(),
             ];
@@ -67,6 +68,7 @@ class DemoDataSeeder extends Seeder
         foreach ($classes as $class) {
             foreach ($sectionNames as $letter) {
                 $row = [
+                    'merchant_id' => 'DEFAULT_TENANT',
                     'created_at' => now(),
                     'updated_at' => now(),
                 ];
@@ -100,6 +102,7 @@ class DemoDataSeeder extends Seeder
         $subjects = ['English', 'Mathematics', 'Science', 'Computer', 'Urdu', 'Islamiyat', 'Physics', 'Chemistry', 'Biology'];
         foreach ($subjects as $s) {
             $row = [
+                'merchant_id' => 'DEFAULT_TENANT',
                 'created_at' => now(),
                 'updated_at' => now(),
             ];
@@ -121,6 +124,7 @@ class DemoDataSeeder extends Seeder
             $last = $faker->lastName();
             $email = Str::slug($first.'.'.$last).$i.'@school.test';
             $row = [
+                'merchant_id' => 'DEFAULT_TENANT',
                 'created_at' => now(),
                 'updated_at' => now(),
             ];
@@ -167,6 +171,7 @@ class DemoDataSeeder extends Seeder
             $first = $faker->firstName();
             $last = $faker->lastName();
             $row = [
+                'merchant_id' => 'DEFAULT_TENANT',
                 'created_at' => now(),
                 'updated_at' => now(),
             ];
@@ -201,7 +206,7 @@ class DemoDataSeeder extends Seeder
             if ($this->has('students', 'cast')) $row['cast'] = $faker->word();
             if ($this->has('students', 'blood_group')) $row['blood_group'] = $faker->randomElement(['A+','A-','B+','B-','AB+','AB-','O+','O-']);
             if ($this->has('students', 'photo_path')) $row['photo_path'] = 'default.jpg';
-            if ($this->has('students', 'merchant_id')) $row['merchant_id'] = 'MER-'.Str::upper(Str::random(6));
+            // merchant_id already set above in $row initialization
 
             DB::table('students')->insert($row);
         }
@@ -224,6 +229,7 @@ class DemoDataSeeder extends Seeder
             $balance = $total - $paid - $discount + $fine;
 
             DB::table('fee_summaries')->insert([
+                'merchant_id' => 'DEFAULT_TENANT',
                 'student_id' => $sid,
                 'class_id' => !empty($classIds) ? $faker->randomElement($classIds) : null,
                 'academic_year_id' => !empty($yearIds) ? $faker->randomElement($yearIds) : null,
