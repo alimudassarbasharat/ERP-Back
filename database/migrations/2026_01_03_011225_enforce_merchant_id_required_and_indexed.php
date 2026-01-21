@@ -53,17 +53,16 @@ return new class extends Migration
                 continue;
             }
 
-            Schema::table($tableName, function (Blueprint $table) use ($tableName) {
-                // Make merchant_id required if it exists and is nullable
-                if (Schema::hasColumn($tableName, 'merchant_id')) {
-                    // First, backfill any null values with a default (use existing data's merchant_id if available)
-                    // This is a safety measure - in production, you should manually backfill before running this
-                    DB::statement("
-                        UPDATE {$tableName} 
-                        SET merchant_id = 'DEFAULT_TENANT' 
-                        WHERE merchant_id IS NULL
-                    ");
-                    
+            // Handle merchant_id column
+            if (Schema::hasColumn($tableName, 'merchant_id')) {
+                // First, backfill any null values with a default
+                DB::statement("
+                    UPDATE {$tableName} 
+                    SET merchant_id = 'DEFAULT_TENANT' 
+                    WHERE merchant_id IS NULL
+                ");
+                
+                Schema::table($tableName, function (Blueprint $table) use ($tableName) {
                     // Change column to be not nullable
                     $table->string('merchant_id')->nullable(false)->change();
                     
@@ -71,18 +70,25 @@ return new class extends Migration
                     if (!$this->hasIndex($tableName, "{$tableName}_merchant_id_index")) {
                         $table->index('merchant_id', "{$tableName}_merchant_id_index");
                     }
-                } else {
-                    // Add merchant_id if it doesn't exist
-                    $table->string('merchant_id')->nullable(false)->after('id');
+                });
+            } else {
+                // Add merchant_id as nullable first
+                Schema::table($tableName, function (Blueprint $table) use ($tableName) {
+                    $table->string('merchant_id')->nullable()->after('id');
+                });
+                
+                // Backfill with default
+                DB::statement("
+                    UPDATE {$tableName} 
+                    SET merchant_id = 'DEFAULT_TENANT'
+                ");
+                
+                // Make it non-nullable and add index
+                Schema::table($tableName, function (Blueprint $table) use ($tableName) {
+                    $table->string('merchant_id')->nullable(false)->change();
                     $table->index('merchant_id', "{$tableName}_merchant_id_index");
-                    
-                    // Backfill with default (should be replaced with actual merchant_id)
-                    DB::statement("
-                        UPDATE {$tableName} 
-                        SET merchant_id = 'DEFAULT_TENANT'
-                    ");
-                }
-            });
+                });
+            }
         }
 
         // Pivot tables - add merchant_id if they don't have it
@@ -116,16 +122,29 @@ return new class extends Migration
     private function hasIndex($table, $indexName)
     {
         $connection = Schema::getConnection();
-        $databaseName = $connection->getDatabaseName();
         
-        $result = DB::select(
-            "SELECT COUNT(*) as count 
-             FROM information_schema.statistics 
-             WHERE table_schema = ? 
-             AND table_name = ? 
-             AND index_name = ?",
-            [$databaseName, $table, $indexName]
-        );
+        // PostgreSQL-compatible index check
+        if ($connection->getDriverName() === 'pgsql') {
+            $result = DB::select(
+                "SELECT COUNT(*) as count 
+                 FROM pg_indexes 
+                 WHERE schemaname = 'public'
+                 AND tablename = ? 
+                 AND indexname = ?",
+                [$table, $indexName]
+            );
+        } else {
+            // MySQL fallback
+            $databaseName = $connection->getDatabaseName();
+            $result = DB::select(
+                "SELECT COUNT(*) as count 
+                 FROM information_schema.statistics 
+                 WHERE table_schema = ? 
+                 AND table_name = ? 
+                 AND index_name = ?",
+                [$databaseName, $table, $indexName]
+            );
+        }
         
         return $result[0]->count > 0;
     }

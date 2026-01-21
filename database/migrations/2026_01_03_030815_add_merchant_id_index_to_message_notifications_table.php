@@ -39,7 +39,7 @@ return new class extends Migration
         
         if ($connection->getDriverName() === 'pgsql') {
             $result = $connection->selectOne(
-                "SELECT COUNT(*) as count FROM pg_indexes WHERE tablename = ? AND indexname = ?",
+                "SELECT COUNT(*) as count FROM pg_indexes WHERE schemaname = 'public' AND tablename = ? AND indexname = ?",
                 [$table, $indexName]
             );
             return $result->count > 0;

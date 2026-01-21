@@ -93,12 +93,13 @@ return new class extends Migration
         
         if ($driver === 'pgsql') {
             $result = DB::select(
-                "SELECT COUNT(*) as count FROM pg_indexes WHERE tablename = ? AND indexname = ?",
+                "SELECT COUNT(*) as count FROM pg_indexes WHERE schemaname = 'public' AND tablename = ? AND indexname = ?",
                 [$table, $indexName]
             );
             return $result[0]->count > 0;
         }
         
+        // MySQL fallback
         $databaseName = $connection->getDatabaseName();
         $result = DB::select(
             "SELECT COUNT(*) as count FROM information_schema.statistics WHERE table_schema = ? AND table_name = ? AND index_name = ?",

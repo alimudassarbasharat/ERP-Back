@@ -151,17 +151,30 @@ return new class extends Migration
     private function hasIndex($table, $indexName)
     {
         $connection = Schema::getConnection();
-        $databaseName = $connection->getDatabaseName();
         
         try {
-            $result = DB::select(
-                "SELECT COUNT(*) as count 
-                 FROM information_schema.statistics 
-                 WHERE table_schema = ? 
-                 AND table_name = ? 
-                 AND index_name = ?",
-                [$databaseName, $table, $indexName]
-            );
+            // PostgreSQL-compatible index check
+            if ($connection->getDriverName() === 'pgsql') {
+                $result = DB::select(
+                    "SELECT COUNT(*) as count 
+                     FROM pg_indexes 
+                     WHERE schemaname = 'public'
+                     AND tablename = ? 
+                     AND indexname = ?",
+                    [$table, $indexName]
+                );
+            } else {
+                // MySQL fallback
+                $databaseName = $connection->getDatabaseName();
+                $result = DB::select(
+                    "SELECT COUNT(*) as count 
+                     FROM information_schema.statistics 
+                     WHERE table_schema = ? 
+                     AND table_name = ? 
+                     AND index_name = ?",
+                    [$databaseName, $table, $indexName]
+                );
+            }
             
             return $result[0]->count > 0;
         } catch (\Exception $e) {
@@ -175,16 +188,28 @@ return new class extends Migration
     private function getIndexes($table)
     {
         $connection = Schema::getConnection();
-        $databaseName = $connection->getDatabaseName();
         
         try {
-            $result = DB::select(
-                "SELECT index_name 
-                 FROM information_schema.statistics 
-                 WHERE table_schema = ? 
-                 AND table_name = ?",
-                [$databaseName, $table]
-            );
+            // PostgreSQL-compatible index retrieval
+            if ($connection->getDriverName() === 'pgsql') {
+                $result = DB::select(
+                    "SELECT indexname as index_name 
+                     FROM pg_indexes 
+                     WHERE schemaname = 'public'
+                     AND tablename = ?",
+                    [$table]
+                );
+            } else {
+                // MySQL fallback
+                $databaseName = $connection->getDatabaseName();
+                $result = DB::select(
+                    "SELECT index_name 
+                     FROM information_schema.statistics 
+                     WHERE table_schema = ? 
+                     AND table_name = ?",
+                    [$databaseName, $table]
+                );
+            }
             
             return array_map(function($row) {
                 return $row->index_name;
@@ -195,22 +220,35 @@ return new class extends Migration
     }
     
     /**
-     * Get all foreign keys for a table
+     * Get all foreign keys for a table (PostgreSQL compatible)
      */
     private function getForeignKeys($table)
     {
         $connection = Schema::getConnection();
-        $databaseName = $connection->getDatabaseName();
         
         try {
-            $result = DB::select(
-                "SELECT constraint_name 
-                 FROM information_schema.table_constraints 
-                 WHERE table_schema = ? 
-                 AND table_name = ? 
-                 AND constraint_type = 'FOREIGN KEY'",
-                [$databaseName, $table]
-            );
+            // PostgreSQL-compatible foreign key retrieval
+            if ($connection->getDriverName() === 'pgsql') {
+                $result = DB::select(
+                    "SELECT constraint_name 
+                     FROM information_schema.table_constraints 
+                     WHERE table_schema = 'public'
+                     AND table_name = ? 
+                     AND constraint_type = 'FOREIGN KEY'",
+                    [$table]
+                );
+            } else {
+                // MySQL fallback
+                $databaseName = $connection->getDatabaseName();
+                $result = DB::select(
+                    "SELECT constraint_name 
+                     FROM information_schema.table_constraints 
+                     WHERE table_schema = ? 
+                     AND table_name = ? 
+                     AND constraint_type = 'FOREIGN KEY'",
+                    [$databaseName, $table]
+                );
+            }
             
             return array_map(function($row) {
                 return $row->constraint_name;

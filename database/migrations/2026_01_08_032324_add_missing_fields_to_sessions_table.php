@@ -13,36 +13,64 @@ return new class extends Migration
     {
         Schema::table('sessions', function (Blueprint $table) {
             // Add start and end dates
-            $table->date('start_date')->nullable()->after('description');
-            $table->date('end_date')->nullable()->after('start_date');
+            if (!Schema::hasColumn('sessions', 'start_date')) {
+                $table->date('start_date')->nullable();
+            }
+            if (!Schema::hasColumn('sessions', 'end_date')) {
+                $table->date('end_date')->nullable();
+            }
             
             // Add is_active field (only one active session per school)
-            $table->boolean('is_active')->default(false)->after('status');
+            if (!Schema::hasColumn('sessions', 'is_active')) {
+                $table->boolean('is_active')->default(false);
+            }
             
             // Add school relationship
-            $table->unsignedBigInteger('school_id')->nullable()->after('is_active');
+            if (!Schema::hasColumn('sessions', 'school_id')) {
+                $table->unsignedBigInteger('school_id')->nullable();
+            }
             
             // Add notes field
-            $table->text('notes')->nullable()->after('school_id');
-            
-            // Update status enum to include more states
-            $table->dropColumn('status');
+            if (!Schema::hasColumn('sessions', 'notes')) {
+                $table->text('notes')->nullable();
+            }
         });
         
-        // Add the new status column with updated enum values
-        Schema::table('sessions', function (Blueprint $table) {
-            $table->enum('status', ['draft', 'active', 'archived'])->default('draft')->after('is_active');
-        });
+        // Update status enum to include more states (only if not already done)
+        if (Schema::hasColumn('sessions', 'status')) {
+            try {
+                Schema::table('sessions', function (Blueprint $table) {
+                    $table->dropColumn('status');
+                });
+                
+                Schema::table('sessions', function (Blueprint $table) {
+                    $table->enum('status', ['draft', 'active', 'archived'])->default('draft');
+                });
+            } catch (\Exception $e) {
+                // Status column might already be the correct type
+                echo "⚠️  Status column already updated or error: " . $e->getMessage() . "\n";
+            }
+        } else {
+            Schema::table('sessions', function (Blueprint $table) {
+                $table->enum('status', ['draft', 'active', 'archived'])->default('draft');
+            });
+        }
         
-        // Add indexes for performance
-        Schema::table('sessions', function (Blueprint $table) {
-            $table->index(['school_id', 'is_active']);
-            $table->index(['merchant_id', 'is_active']);
-            $table->index(['start_date', 'end_date']);
-            
-            // Add foreign key constraint for school_id
-            $table->foreign('school_id')->references('id')->on('schools')->onDelete('cascade');
-        });
+        // Add indexes for performance (skip if they exist)
+        try {
+            Schema::table('sessions', function (Blueprint $table) {
+                $table->index(['school_id', 'is_active']);
+                $table->index(['merchant_id', 'is_active']);
+                $table->index(['start_date', 'end_date']);
+                
+                // Add foreign key constraint for school_id
+                if (Schema::hasTable('schools') && Schema::hasColumn('sessions', 'school_id')) {
+                    $table->foreign('school_id')->references('id')->on('schools')->onDelete('cascade');
+                }
+            });
+        } catch (\Exception $e) {
+            echo "⚠️  Index or foreign key already exists: " . $e->getMessage() . "\n";
+        }
     }
 
     /**

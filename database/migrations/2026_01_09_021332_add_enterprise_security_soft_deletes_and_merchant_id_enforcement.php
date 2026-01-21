@@ -156,14 +156,16 @@ return new class extends Migration
                 continue;
             }
 
-            // Check if merchant_id is indexed
+            // Check if merchant_id is indexed (PostgreSQL compatible)
             $indexName = $table . '_merchant_id_index';
+            
+            // PostgreSQL-compatible index check
             $indexExists = DB::select("
                 SELECT 1
-                FROM information_schema.statistics
-                WHERE table_schema = DATABASE()
-                AND table_name = ?
-                AND index_name = ?
+                FROM pg_indexes
+                WHERE schemaname = 'public'
+                AND tablename = ?
+                AND indexname = ?
             ", [$table, $indexName]);
 
             if (empty($indexExists)) {

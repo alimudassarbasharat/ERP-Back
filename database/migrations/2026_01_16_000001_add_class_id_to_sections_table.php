@@ -71,21 +71,21 @@ return new class extends Migration
     }
     
     /**
-     * Check if an index exists
+     * Check if an index exists (PostgreSQL compatible)
      */
     private function hasIndex($table, $indexName)
     {
         $connection = Schema::getConnection();
-        $databaseName = $connection->getDatabaseName();
         
         try {
+            // For PostgreSQL
             $result = \DB::select(
                 "SELECT indexname 
                  FROM pg_indexes 
-                 WHERE schemaname = ? 
+                 WHERE schemaname = 'public'
                  AND tablename = ? 
                  AND indexname = ?",
-                [$databaseName, $table, $indexName]
+                [$table, $indexName]
             );
             
             return count($result) > 0;
@@ -95,20 +95,20 @@ return new class extends Migration
     }
     
     /**
-     * Get all indexes for a table
+     * Get all indexes for a table (PostgreSQL compatible)
      */
     private function getIndexes($table)
     {
         $connection = Schema::getConnection();
-        $databaseName = $connection->getDatabaseName();
         
         try {
+            // For PostgreSQL
             $result = \DB::select(
                 "SELECT indexname 
                  FROM pg_indexes 
-                 WHERE schemaname = ? 
+                 WHERE schemaname = 'public'
                  AND tablename = ?",
-                [$databaseName, $table]
+                [$table]
             );
             
             return array_map(function($row) {
