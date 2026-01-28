@@ -184,7 +184,7 @@ class DemoDataSeeder extends Seeder
             if ($this->has('students', 'gender')) {
                 // Choose case based on schema variant
                 $genderValues = ['male','female','other'];
-                if ($this->has('students', 'DOB') || $this->has('students', 'DOA')) {
+                if ($this->has('students', 'date_of_birth') || $this->has('students', 'admission_date')) {
                     $genderValues = ['Male','Female','Other'];
                 }
                 $row['gender'] = $faker->randomElement($genderValues);
@@ -200,8 +200,7 @@ class DemoDataSeeder extends Seeder
             // Older schema fields
             if ($this->has('students', 'roll_number')) $row['roll_number'] = 'ROLL-'.str_pad((string)$i, 5, '0', STR_PAD_LEFT);
             if ($this->has('students', 'cnic_number')) $row['cnic_number'] = $faker->numerify('#####-#######-#');
-            if ($this->has('students', 'DOB')) $row['DOB'] = $faker->date('Y-m-d', '-12 years');
-            if ($this->has('students', 'DOA')) $row['DOA'] = $faker->date('Y-m-d', 'now');
+            if ($this->has('students', 'admission_date')) $row['admission_date'] = $faker->date('Y-m-d', 'now');
             if ($this->has('students', 'religion')) $row['religion'] = $faker->randomElement(['Islam','Christianity','Hinduism','Other']);
             if ($this->has('students', 'cast')) $row['cast'] = $faker->word();
             if ($this->has('students', 'blood_group')) $row['blood_group'] = $faker->randomElement(['A+','A-','B+','B-','AB+','AB-','O+','O-']);

@@ -35,19 +35,19 @@ class UpdateStudentRequest extends FormRequest
                 Rule::unique('students')->ignore($this->student->id)
             ],
             'class_id' => 'sometimes|required|exists:classes,id',
-            'gender' => 'sometimes|required|in:male,female,other',
+            'gender' => 'sometimes|required|string|in:Male,Female,Other',
             'date_of_birth' => 'sometimes|required|date',
             'blood_group' => 'nullable|string|max:10',
             'admission_date' => 'sometimes|required|date',
             'status' => 'sometimes|required|in:active,inactive,graduated',
             'photo' => 'nullable|image|max:2048',
-            
+
             // Contact Information
             'contact_info.email' => 'nullable|email|max:255',
             'contact_info.phone' => 'nullable|string|max:20',
             'contact_info.whatsapp_number' => 'nullable|string|max:20',
             'contact_info.address' => 'nullable|string|max:500',
-            
+
             // Family Information
             'family_info.father_name' => 'nullable|string|max:255',
             'family_info.father_occupation' => 'nullable|string|max:255',
@@ -84,14 +84,14 @@ class UpdateStudentRequest extends FormRequest
             'status.in' => 'Status must be active, inactive, or graduated',
             'photo.image' => 'The file must be an image',
             'photo.max' => 'Image size cannot exceed 2MB',
-            
+
             // Contact Information Messages
             'contact_info.email.email' => 'Invalid email format',
             'contact_info.email.max' => 'Email cannot exceed 255 characters',
             'contact_info.phone.max' => 'Phone number cannot exceed 20 characters',
             'contact_info.whatsapp_number.max' => 'WhatsApp number cannot exceed 20 characters',
             'contact_info.address.max' => 'Address cannot exceed 500 characters',
-            
+
             // Family Information Messages
             'family_info.father_name.max' => 'Father\'s name cannot exceed 255 characters',
             'family_info.father_occupation.max' => 'Father\'s occupation cannot exceed 255 characters',
@@ -116,4 +116,4 @@ class UpdateStudentRequest extends FormRequest
             'errors' => $validator->errors()
         ], 422));
     }
-} 
+}

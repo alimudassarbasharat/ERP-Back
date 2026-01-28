@@ -13,6 +13,13 @@ class Student extends Model
 
     protected $guarded = [];
 
+    // protected static function booted()
+    // {
+    //     static::addGlobalScope('merchant', function ($query) {
+    //         $query->where('students.merchant_id', auth()->user()->merchant_id);
+    //     });
+    // }
+
     /**
      * Get the family information associated with the student.
      */
@@ -120,5 +127,3 @@ class Student extends Model
         return $this->hasMany(ExamResult::class);
     }
 }
-
-

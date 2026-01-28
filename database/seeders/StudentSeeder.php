@@ -25,8 +25,8 @@ class StudentSeeder extends Seeder
                 'roll_number' => $faker->unique()->numerify('ROLL-#####'),
                 'gender' => $faker->randomElement($genders),
                 'cnic_number' => $faker->unique()->numerify('#####-#######-#'),
-                'DOB' => $faker->date('Y-m-d', '-5 years'),
-                'DOA' => $faker->date('Y-m-d', 'now'),
+                'date_of_birth' => $faker->date('Y-m-d', '-5 years'),
+                'admission_date' => $faker->date('Y-m-d', 'now'),
                 'religion' => $faker->randomElement($religions),
                 'cast' => $faker->word(),
                 'blood_group' => $faker->randomElement($bloodGroups),
@@ -37,4 +37,4 @@ class StudentSeeder extends Seeder
             ]);
         }
     }
-} 
+}

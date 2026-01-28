@@ -15,7 +15,7 @@ class UserListController extends Controller
     public function getAssignableUsers(Request $request)
     {
         try {
-            $merchantId = auth()->user()->merchant_id ?? 'SUPER123';
+            $merchantId = auth()->user()->merchant_id ?? 'DEFAULT_TENANT';
             $users = [];
 
             // Get Admins

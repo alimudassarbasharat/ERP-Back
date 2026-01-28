@@ -23,7 +23,8 @@ class ContactInformation extends Model
         'postal_code',
         'alternative_contact_name',
         'alternative_contact_number',
-        'alternative_contact_relationship'
+        'alternative_contact_relationship',
+        'merchant_id',
     ];
 
     /**

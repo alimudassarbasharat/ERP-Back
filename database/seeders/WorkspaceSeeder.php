@@ -12,7 +12,7 @@ class WorkspaceSeeder extends Seeder
      */
     public function run(): void
     {
-        $merchantId = 'SUPER123'; // Default merchant ID
+        $merchantId = 'DEFAULT_TENANT'; // Default merchant ID
 
         $workspaces = [
             [

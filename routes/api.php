@@ -237,7 +237,7 @@ Route::middleware(['auth:api', 'merchant_verification'])->group(function () {
         Route::post('/exams/{id}/generate-results', [\App\Http\Controllers\Api\ExamManagementController::class, 'generateResults']);
         Route::get('/exams/{id}/marksheets', [\App\Http\Controllers\Api\ExamManagementController::class, 'downloadMarksheets']);
     });
-    
+
     // Datesheet Management
     Route::prefix('datesheets')->group(function () {
         Route::get('/exams/{examId}', [\App\Http\Controllers\Api\DatesheetController::class, 'getDatesheet']);
@@ -248,7 +248,7 @@ Route::middleware(['auth:api', 'merchant_verification'])->group(function () {
         Route::get('/{datesheetId}/conflicts', [\App\Http\Controllers\Api\DatesheetController::class, 'getConflicts']);
         Route::post('/{datesheetId}/publish', [\App\Http\Controllers\Api\DatesheetController::class, 'publish']);
     });
-    
+
     // Enhanced Marks Entry (Multi-class/Multi-subject)
     Route::prefix('exam-marks')->group(function () {
         Route::post('/fetch-students', [\App\Http\Controllers\Api\ExamMarksController::class, 'fetchStudents']);
@@ -258,7 +258,7 @@ Route::middleware(['auth:api', 'merchant_verification'])->group(function () {
         Route::post('/verify', [\App\Http\Controllers\Api\ExamMarksController::class, 'verify']);
         Route::post('/lock', [\App\Http\Controllers\Api\ExamMarksController::class, 'lock']);
     });
-    
+
     // Exam Papers Management
     Route::prefix('exam-papers')->group(function () {
         Route::get('/', [\App\Http\Controllers\Api\ExamPaperController::class, 'index']);
@@ -273,7 +273,7 @@ Route::middleware(['auth:api', 'merchant_verification'])->group(function () {
         Route::post('/{id}/reject', [\App\Http\Controllers\Api\ExamPaperController::class, 'reject']);
         Route::post('/{id}/lock', [\App\Http\Controllers\Api\ExamPaperController::class, 'lock']);
     });
-    
+
     // Fee Management (Owner-First API)
     Route::prefix('fee-management')->group(function () {
         Route::get('/summary', [\App\Http\Controllers\Api\FeeManagementController::class, 'getSummary']);
@@ -285,7 +285,7 @@ Route::middleware(['auth:api', 'merchant_verification'])->group(function () {
         Route::post('/generate-monthly-fees', [\App\Http\Controllers\Api\FeeManagementController::class, 'generateMonthlyFees']);
         Route::post('/send-reminders', [\App\Http\Controllers\Api\FeeManagementController::class, 'sendReminders']);
     });
-    
+
     // Job Status Polling
     Route::prefix('jobs')->group(function () {
         Route::get('/batch/{batchId}/status', [\App\Http\Controllers\Api\JobStatusController::class, 'getBatchStatus']);
@@ -419,11 +419,11 @@ Route::middleware(['auth:api', 'merchant_verification'])->group(function () {
         Route::get('/general', [SettingsController::class, 'getGeneralSettings']);
         Route::post('/general', [SettingsController::class, 'saveGeneralSettings']);
         Route::get('/check-school', [SettingsController::class, 'checkSchoolExists']);
-        
+
         // Notification Settings (✅ NOW AVAILABLE)
         Route::get('/notifications', [SettingsController::class, 'getNotificationSettings']);
         Route::post('/notifications', [SettingsController::class, 'saveNotificationSettings']);
-        
+
         // School Profile endpoints (comprehensive)
         Route::prefix('school')->group(function () {
             Route::get('/', [SchoolProfileController::class, 'index']);
@@ -439,7 +439,7 @@ Route::middleware(['auth:api', 'merchant_verification'])->group(function () {
 
     // Statistics endpoint
     Route::get('/statistics/counts', [StatisticsController::class, 'getCounts']);
-    
+
     // Dashboard endpoints
     Route::prefix('admin/dashboard')->group(function () {
         Route::get('/monthly-income', [DashboardController::class, 'getMonthlyIncome']);
@@ -653,7 +653,7 @@ Route::middleware(['auth:api'])->group(function () {
         // Attachments
         Route::post('/{id}/attachments', [TicketController::class, 'uploadAttachment']);
         Route::delete('/{id}/attachments/{attachmentId}', [TicketController::class, 'deleteAttachment']);
-        
+
         // Voice Recordings
         Route::post('/{id}/voice-recording', [TicketController::class, 'uploadVoiceRecording']);
         Route::delete('/{id}/voice-recordings/{voiceRecordingId}', [TicketController::class, 'deleteVoiceRecording']);

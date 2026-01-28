@@ -102,15 +102,15 @@ class CreateTablesWithoutConstraints extends Migration
         if (!Schema::hasTable('students')) {
             Schema::create('students', function (Blueprint $table) {
                 $table->id();
-                $table->string('first_name');
-                $table->string('last_name');
+                $table->string('first_name')->nullable();
+                $table->string('last_name')->nullable();
                 $table->string('email')->unique()->nullable();
-                $table->date('date_of_birth');
+                $table->date(column: 'date_of_birth')->nullable();
                 $table->enum('gender', ['male', 'female', 'other']);
                 $table->string('phone_number')->nullable();
                 $table->text('address')->nullable();
                 $table->string('admission_number')->unique();
-                $table->date('admission_date');
+                $table->date(column: 'admission_date')->nullable();
                 $table->enum('status', ['active', 'inactive', 'graduated', 'dropped_out'])->default('active');
                 $table->text('medical_conditions')->nullable();
                 $table->text('emergency_contact')->nullable();

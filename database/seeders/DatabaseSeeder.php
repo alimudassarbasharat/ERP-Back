@@ -18,7 +18,7 @@ class DatabaseSeeder extends Seeder
     public function run(): void
     {
         // Direct seeding without calling other seeders to avoid mbstring issues
-        
+
         // 1. Create roles
         $roles = [
             ['id' => 1, 'name' => 'super-admin', 'guard_name' => 'web', 'merchant_id' => 'DEFAULT_TENANT'],
@@ -81,7 +81,7 @@ class DatabaseSeeder extends Seeder
         ]);
 
         // 6. Create admins
-        DB::statement("INSERT INTO admins (name, email, password, role_id, status, merchant_id, created_at, updated_at) VALUES ('Super Admin', 'superadmin@test.com', ?, 1, 'active', 'SUPER123', ?, ?) ON CONFLICT (email) DO NOTHING", [
+        DB::statement("INSERT INTO admins (name, email, password, role_id, status, merchant_id, created_at, updated_at) VALUES ('Super Admin', 'superadmin@test.com', ?, 1, 'active', 'DEFAULT_TENANT', ?, ?) ON CONFLICT (email) DO NOTHING", [
             Hash::make('password'), now(), now()
         ]);
 
@@ -115,7 +115,7 @@ class DatabaseSeeder extends Seeder
 
         // 8. Seed demo relational data for common tables (idempotent)
         $this->call(DemoDataSeeder::class);
-        
+
         // 9. Seed exam management demo data (optional, run separately if needed)
         // $this->call(ExamManagementDemoSeeder::class);
     }

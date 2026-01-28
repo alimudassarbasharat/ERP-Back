@@ -15,26 +15,43 @@ return new class extends Migration
     {
         Schema::create('family_infos', function (Blueprint $table) {
             $table->id();
+
             // Father Information
-            $table->string('father_name');
-            $table->string('father_cnic', 15)->unique(); // CNIC format: 12345-1234567-1
+            $table->string('father_name')->nullable();
+            $table->string('father_cnic', 25)->nullable(); // Max 25 for CNIC formats
             $table->string('father_occupation')->nullable();
-            
+
             // Mother Information
             $table->string('mother_name')->nullable();
-            
-            // Address
-            $table->text('home_address');
-            
+            $table->string('mother_cnic', 25)->nullable();
+            $table->string('mother_occupation')->nullable();
+
+            // Guardian Information
+            $table->string('guardian_name')->nullable();
+            $table->string('guardian_cnic', 25)->nullable();
+            $table->string('guardian_occupation')->nullable();
+            $table->string('guardian_relationship')->nullable();
+
+            // Address & Contact
+            $table->text('home_address')->nullable();
+            $table->string('emergency_contact', 20)->nullable();
+
+            // Family Details
+            $table->decimal('monthly_income', 15, 2)->nullable(); // decimal for income
+            $table->integer('family_members')->nullable();
+
             // Foreign Key
             $table->foreignId('student_id')
-                  ->unique()
-                  ->constrained('students')
-                  ->cascadeOnDelete();
-                  $table->string('merchant_id');
-                  $table->timestamps();
+                ->unique()
+                ->constrained('students')
+                ->cascadeOnDelete();
+
+            $table->string('merchant_id')->nullable();
+
+            $table->timestamps();
         });
     }
+
 
     /**
      * Reverse the migrations.
@@ -43,6 +60,6 @@ return new class extends Migration
      */
     public function down()
     {
-                    Schema::dropIfExists('family_infos');
+        Schema::dropIfExists('family_infos');
     }
 };

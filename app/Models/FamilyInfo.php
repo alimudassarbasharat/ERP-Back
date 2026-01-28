@@ -25,7 +25,8 @@ class FamilyInfo extends Model
         'home_address',
         'emergency_contact',
         'monthly_income',
-        'family_members'
+        'family_members',
+        'merchant_id',
     ];
 
     /**

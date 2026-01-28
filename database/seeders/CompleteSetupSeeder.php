@@ -83,7 +83,7 @@ class CompleteSetupSeeder extends Seeder
 
         // 5. Create admin users
         echo "5️⃣ Creating admin users...\n";
-        DB::statement("INSERT INTO admins (name, email, password, role_id, status, merchant_id, created_at, updated_at) VALUES ('Super Admin', 'superadmin@test.com', ?, 1, 'active', 'SUPER123', ?, ?) ON CONFLICT (email) DO NOTHING", [
+        DB::statement("INSERT INTO admins (name, email, password, role_id, status, merchant_id, created_at, updated_at) VALUES ('Super Admin', 'superadmin@test.com', ?, 1, 'active', 'DEFAULT_TENANT', ?, ?) ON CONFLICT (email) DO NOTHING", [
             Hash::make('password'), now(), now()
         ]);
 

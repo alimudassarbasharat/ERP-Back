@@ -99,7 +99,7 @@ class FeeManagementController extends Controller
         if ($request->filled('merchant_id')) {
             $merchantId = $request->merchant_id;
             // Only filter by merchant_id if it's numeric (bigint column)
-            // Skip filter for string merchant_ids like "SUPER123"
+            // Skip filter for string merchant_ids like "DEFAULT_TENANT"
             if (is_numeric($merchantId)) {
                 $query->where('merchant_id', (int)$merchantId);
             }
@@ -171,7 +171,7 @@ class FeeManagementController extends Controller
     {
         $month = $request->input('month'); // optional filter
         $session = $request->input('session'); // optional filter
-        
+
         // Convert month name to date format if provided
         $monthForFilter = null;
         if ($month) {
@@ -192,7 +192,7 @@ class FeeManagementController extends Controller
         $result = $classes->map(function($class) use ($monthForFilter, $session) {
             // Get actual students count in this class
             $actualStudents = $class->students()->whereNull('deleted_at')->count();
-            
+
             $feeSummaries = \App\Models\FeeSummary::where('class_id', $class->id)
                 ->when($monthForFilter, function($q) use ($monthForFilter) {
                     $q->where('month_for', $monthForFilter);
@@ -206,7 +206,7 @@ class FeeManagementController extends Controller
                 ->get();
 
             $total_students = $actualStudents; // Use actual student count
-            $total_fees = $feeSummaries->sum('final_amount');   
+            $total_fees = $feeSummaries->sum('final_amount');
             $paid_count = $feeSummaries->where('payment_status', 'paid')->count();
             $unpaid_count = $feeSummaries->where('payment_status', '!=', 'paid')->count();
 
@@ -278,11 +278,11 @@ class FeeManagementController extends Controller
                 DB::raw('SUM(COALESCE(fs.final_amount, fd.monthly_fee, 0) - COALESCE(fs.partial_fee_paid, 0)) as total_remaining'),
                 DB::raw("COUNT(CASE WHEN COALESCE(fs.payment_status, 'unpaid') = 'paid' THEN 1 END) as paid_students"),
                 DB::raw("COUNT(CASE WHEN COALESCE(fs.payment_status, 'unpaid') != 'paid' THEN 1 END) as unpaid_students"),
-                DB::raw("CASE 
-                    WHEN COUNT(CASE WHEN COALESCE(fs.payment_status, 'unpaid') != 'paid' THEN 1 END) = 0 
-                         AND COUNT(CASE WHEN COALESCE(fs.payment_status, 'unpaid') = 'paid' THEN 1 END) > 0 
+                DB::raw("CASE
+                    WHEN COUNT(CASE WHEN COALESCE(fs.payment_status, 'unpaid') != 'paid' THEN 1 END) = 0
+                         AND COUNT(CASE WHEN COALESCE(fs.payment_status, 'unpaid') = 'paid' THEN 1 END) > 0
                     THEN 'paid'
-                    WHEN COUNT(CASE WHEN COALESCE(fs.payment_status, 'unpaid') = 'paid' THEN 1 END) > 0 
+                    WHEN COUNT(CASE WHEN COALESCE(fs.payment_status, 'unpaid') = 'paid' THEN 1 END) > 0
                     THEN 'partial'
                     ELSE 'unpaid'
                 END as family_status")
@@ -318,10 +318,10 @@ class FeeManagementController extends Controller
         if ($request->filled('fee_status') && $request->fee_status !== 'All') {
             $status = strtolower($request->fee_status);
             if ($status === 'paid') {
-                $query->havingRaw("COUNT(CASE WHEN COALESCE(fs.payment_status, 'unpaid') != 'paid' THEN 1 END) = 0 
+                $query->havingRaw("COUNT(CASE WHEN COALESCE(fs.payment_status, 'unpaid') != 'paid' THEN 1 END) = 0
                                    AND COUNT(CASE WHEN COALESCE(fs.payment_status, 'unpaid') = 'paid' THEN 1 END) > 0");
             } elseif ($status === 'partial') {
-                $query->havingRaw("COUNT(CASE WHEN COALESCE(fs.payment_status, 'unpaid') = 'paid' THEN 1 END) > 0 
+                $query->havingRaw("COUNT(CASE WHEN COALESCE(fs.payment_status, 'unpaid') = 'paid' THEN 1 END) > 0
                                    AND COUNT(CASE WHEN COALESCE(fs.payment_status, 'unpaid') != 'paid' THEN 1 END) > 0");
             } elseif ($status === 'unpaid') {
                 $query->havingRaw("COUNT(CASE WHEN COALESCE(fs.payment_status, 'unpaid') = 'paid' THEN 1 END) = 0");
@@ -616,4 +616,4 @@ class FeeManagementController extends Controller
             ], 500);
         }
     }
-} 
+}
